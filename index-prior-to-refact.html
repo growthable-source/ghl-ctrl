@@ -1,0 +1,2833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHL CTRL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #667eea;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: #718096;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #4a5568;
+        }
+
+        .location-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .location-selector {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .location-dropdown {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .location-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .no-location {
+            background: white;
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .no-location h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+
+        .no-location p {
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #718096;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+        }
+
+        .close-modal {
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .location-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-inactive {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .location-card {
+            background: #f8f9fa;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .location-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .location-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .location-card-meta {
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .location-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        .progress-status {
+            text-align: center;
+            color: #718096;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .warning-message {
+            background: #fffbeb;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .warning-message.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .success-result {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #c6f6d5 0%, #bee3f8 100%);
+            border-radius: 12px;
+            border: 2px solid #48bb78;
+        }
+
+        .success-result.show {
+            display: block;
+            animation: bounceIn 0.5s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .result-key-value {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .result-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 16px;
+            color: #2d3748;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-details {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff5f5;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #9b2c2c;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+            pointer-events: none;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .filter-select:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .view-btn {
+            padding: 8px 12px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            color: #718096;
+            transition: all 0.3s;
+        }
+
+        .view-btn:hover {
+            background: #f7fafc;
+        }
+
+        .view-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .results-info {
+            padding: 10px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            color: #4a5568;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .results-count {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .bulk-actions {
+            display: none;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .bulk-actions.show {
+            display: flex;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bulk-info {
+            color: white;
+            font-weight: 500;
+        }
+
+        .bulk-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .bulk-btn {
+            padding: 8px 16px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .bulk-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .category-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .category-tag {
+            padding: 4px 10px;
+            background: #edf2f7;
+            color: #4a5568;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-tag:hover {
+            border-color: #667eea;
+            background: #e9d8fd;
+        }
+
+        .category-tag.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            padding: 10px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #4a5568;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .icon-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            color: #718096;
+            background: #f7fafc;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .no-results h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .field-type-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .clear-filters {
+            padding: 8px 12px;
+            background: #fed7d7;
+            color: #c53030;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .clear-filters:hover {
+            background: #fc8181;
+            color: white;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .data-table thead {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .data-table th.checkbox-col {
+            width: 40px;
+            padding: 12px 16px;
+        }
+
+        .data-table th.name-col {
+            width: 25%;
+            min-width: 200px;
+        }
+
+        .data-table th.value-col,
+        .data-table th.type-col {
+            width: 40%;
+            min-width: 250px;
+        }
+
+        .data-table th.actions-col {
+            width: 140px;
+            text-align: right;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid #f3f4f6;
+            transition: background-color 0.15s;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .data-table tbody tr.selected {
+            background: #eff6ff;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: #374151;
+            vertical-align: middle;
+        }
+
+        .data-table td.checkbox-col {
+            width: 40px;
+            padding: 14px 16px;
+        }
+
+        .data-table input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #6366f1;
+        }
+
+        .name-cell {
+            font-weight: 500;
+            color: #111827;
+            word-break: break-word;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .value-cell {
+            color: #6b7280;
+            word-break: break-word;
+            line-height: 1.5;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-width: 500px;
+        }
+
+        .type-cell {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .actions-cell {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .actions-cell .btn {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="confettiCanvas"></canvas>
+    
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>🚀 GHL CTRL</h1>
+            </div>
+            <div class="user-info" id="userInfo"></div>
+        </header>
+
+        <div class="location-bar">
+            <div class="location-selector">
+                <select id="locationDropdown" class="location-dropdown">
+                    <option value="">Select a location...</option>
+                </select>
+                <button class="btn btn-primary" onclick="showAddLocationModal()">+ Add Location</button>
+                <button class="btn btn-secondary" onclick="showLocationSettings()">⚙️ Manage Locations</button>
+                <span id="connectionStatus" class="location-status"></span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="no-location" class="no-location">
+                <h2>No Location Selected</h2>
+                <p>Please select a location from the dropdown above or add a new location to get started.</p>
+                <button class="btn btn-primary" onclick="showAddLocationModal()">Add Your First Location</button>
+            </div>
+
+            <div id="location-content" style="display: none;">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('fields')">Custom Fields</button>
+                    <button class="tab" onclick="switchTab('values')">Custom Values</button>
+                    <button class="tab" onclick="switchTab('settings')">Location Settings</button>
+                </div>
+
+                <div id="fields-section" class="content-section active">
+                    <div class="card">
+                        <h2>Add New Custom Field</h2>
+                        <form id="createFieldForm">
+                            <div class="form-group">
+                                <label for="fieldName">Field Name *</label>
+                                <input type="text" id="fieldName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldDataType">Data Type *</label>
+                                <select id="fieldDataType" name="dataType" required>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary Amount</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldPlaceholder">Placeholder</label>
+                                <input type="text" id="fieldPlaceholder" name="placeholder">
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldModel">Model</label>
+                                <select id="fieldModel" name="model">
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create Field</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Fields</h2>
+                        
+                        <div class="toolbar" id="fieldsToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="fieldsSearch" class="search-input" placeholder="Search fields by name...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="fieldsTypeFilter" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                                
+                                <select id="fieldsModelFilter" class="filter-select">
+                                    <option value="">All Models</option>
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="exportFields()">📥 Export</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="fieldsSelectedCount">0</span> fields selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneFieldsModal()">📋 Clone to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteFields()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllFields()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="fieldsResultsCount" class="results-count">0</span> fields
+                            <button id="fieldsClearFilters" class="clear-filters" style="display: none;" onclick="clearFieldsFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="fieldsList" class="loading">Select a location to view custom fields...</div>
+                    </div>
+                </div>
+
+                <div id="values-section" class="content-section">
+                    <div class="card">
+                        <h2>Add New Custom Value</h2>
+                        <form id="createValueForm">
+                            <div class="form-group">
+                                <label for="valueName">Value Name *</label>
+                                <input type="text" id="valueName" name="name" required>
+                                <div id="nameWarning" class="warning-message">⚠️ Name contains special characters that may need to be converted</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="valueType">Value Type *</label>
+                                <select id="valueType" name="valueType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                    <option value="text">Text Value</option>
+                                    <option value="image">Image URL (Upload Image)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="textValueGroup">
+                                <label for="valueContent">Value *</label>
+                                <textarea id="valueContent" name="value" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="form-group" id="imageUploadGroup" style="display: none;">
+                                <label for="imageUpload">Upload Image *</label>
+                                <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                                <small style="color: #718096; display: block; margin-top: 5px;">
+                                    Upload an image (PNG, JPG, GIF, WEBP, max 5MB). The value will be set to the image URL.
+                                </small>
+                                <div id="imagePreview" style="display: none; margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                    <img id="previewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 10px;">
+                                    <div style="margin-top: 8px; color: #667eea; font-size: 13px; font-weight: 500;" id="imageUrlDisplay"></div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="createValueBtn">Create Value</button>
+                            
+                            <div id="progressContainer" class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <div class="progress-status" id="progressStatus">Initializing...</div>
+                            </div>
+                            
+                            <div id="successResult" class="success-result">
+                                <h3 style="color: #22543d; margin-bottom: 15px;">✅ Custom Value Created Successfully!</h3>
+                                <div class="result-key-value">
+                                    <div class="result-label">Key (System Name)</div>
+                                    <div class="result-value" id="resultKey"></div>
+                                </div>
+                                <div class="result-key-value">
+                                    <div class="result-label">Value</div>
+                                    <div class="result-value" id="resultValue"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Values</h2>
+                        
+                        <div class="toolbar" id="valuesToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="valuesSearch" class="search-input" placeholder="Search values by name or content...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="valuesSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="value-asc">Value (A-Z)</option>
+                                    <option value="value-desc">Value (Z-A)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="exportValues()">📥 Export</button>
+                                <button class="icon-btn" onclick="importValues()">📤 Import</button>
+                                <button class="icon-btn" onclick="syncCustomValues()">🔄 Sync</button>
+                            </div>
+                        </div>
+                        
+                        <div id="valuesBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="valuesSelectedCount">0</span> values selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneValuesModal()">📋 Copy to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteValues()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="bulkExportValues()">Export Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllValues()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="valuesResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="valuesResultsCount" class="results-count">0</span> values
+                            <button id="valuesClearFilters" class="clear-filters" style="display: none;" onclick="clearValuesFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="valuesList" class="loading">Select a location to view custom values...</div>
+                    </div>
+                </div>
+
+                <div id="settings-section" class="content-section">
+                    <div class="card">
+                        <h2>Location Settings</h2>
+                        <div id="locationSettings"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addLocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Location</h2>
+                <button class="close-modal" onclick="closeModal('addLocationModal')">×</button>
+            </div>
+            <form id="addLocationForm">
+                <div class="form-group">
+                    <label for="locationName">Location Name *</label>
+                    <input type="text" id="locationName" name="name" required placeholder="e.g., Main Office, Client ABC">
+                </div>
+                <div class="form-group">
+                    <label for="locationId">GoHighLevel Location ID *</label>
+                    <input type="text" id="locationId" name="locationId" required placeholder="e.g., iXTmrCkWtZKXWzs85Jx8">
+                </div>
+                <div class="form-group">
+                    <label for="locationToken">Private Integration Token *</label>
+                    <input type="password" id="locationToken" name="token" required placeholder="pit-xxxxx...">
+                    <small style="color: #718096; display: block; margin-top: 5px;">Create a Private Integration in this location's GoHighLevel settings</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Test & Add Location</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageLocationsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Locations</h2>
+                <button class="close-modal" onclick="closeModal('manageLocationsModal')">×</button>
+            </div>
+            <div id="locationsList"></div>
+        </div>
+    </div>
+
+    <div id="cloneFieldsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Fields to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneFieldsModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneFieldsCount">0</strong> field(s) from <strong id="cloneFieldsSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneFieldsTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                    <!-- Location checkboxes will be inserted here -->
+                </div>
+            </div>
+            <div id="cloneFieldsProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneFieldsProgressBar"></div>
+                </div>
+                <div id="cloneFieldsStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneFieldsResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneFieldsResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneFields()" id="cloneFieldsBtn">Start Cloning</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneFieldsModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloneValuesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Values to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneValuesModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneValuesCount">0</strong> value(s) from <strong id="cloneValuesSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneValuesTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                    <!-- Location checkboxes will be inserted here -->
+                </div>
+            </div>
+            <div id="cloneValuesProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneValuesProgressBar"></div>
+                </div>
+                <div id="cloneValuesStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneValuesResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneValuesResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneValues()" id="cloneValuesBtn">Start Cloning</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneValuesModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let currentUser = null;
+        let currentLocations = [];
+        let selectedLocation = null;
+        let currentTab = 'fields';
+        let allFields = [];
+        let allValues = [];
+        let selectedFields = new Set();
+        let selectedValues = new Set();
+        let currentFieldsView = 'list';
+        let currentValuesView = 'list';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+            setupFilterListeners();
+        });
+
+        async function checkAuthentication() {
+            try {
+                const response = await fetch(`${API_BASE}/user`);
+                const data = await response.json();
+                
+                if (!data.success || !data.user) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                currentUser = data.user;
+                displayUserInfo();
+                loadLocations();
+                setupFormHandlers();
+                setupInputListeners();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        function displayUserInfo() {
+            const userInfoEl = document.getElementById('userInfo');
+            userInfoEl.innerHTML = `
+                <span style="color: #555; font-size: 14px;">${currentUser.displayName || currentUser.email}</span>
+                <img src="${currentUser.photo || ''}" alt="Profile">
+                <a href="/auth/logout" class="logout-btn">Logout</a>
+            `;
+        }
+
+        async function loadLocations() {
+            try {
+                const response = await fetch(`${API_BASE}/locations`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentLocations = data.locations;
+                    updateLocationDropdown();
+                    
+                    if (currentLocations.length > 0 && !selectedLocation) {
+                        selectLocation(currentLocations[0].id);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load locations:', error);
+            }
+        }
+
+        function updateLocationDropdown() {
+            const dropdown = document.getElementById('locationDropdown');
+            dropdown.innerHTML = '<option value="">Select a location...</option>';
+            
+            currentLocations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.id;
+                option.textContent = location.name;
+                if (selectedLocation && selectedLocation.id === location.id) {
+                    option.selected = true;
+                }
+                dropdown.appendChild(option);
+            });
+            
+            dropdown.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    selectLocation(e.target.value);
+                } else {
+                    selectedLocation = null;
+                    showNoLocation();
+                }
+            });
+        }
+
+        function selectLocation(locationId) {
+            selectedLocation = currentLocations.find(loc => loc.id === locationId);
+            if (selectedLocation) {
+                document.getElementById('no-location').style.display = 'none';
+                document.getElementById('location-content').style.display = 'block';
+                
+                const statusEl = document.getElementById('connectionStatus');
+                statusEl.className = 'location-status status-active';
+                statusEl.textContent = '● Connected';
+                
+                if (currentTab === 'fields') {
+                    loadCustomFields();
+                } else if (currentTab === 'values') {
+                    loadCustomValues();
+                } else {
+                    loadLocationSettings();
+                }
+            }
+        }
+
+        function showNoLocation() {
+            document.getElementById('no-location').style.display = 'block';
+            document.getElementById('location-content').style.display = 'none';
+            document.getElementById('connectionStatus').textContent = '';
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(`${tab}-section`).classList.add('active');
+            
+            if (!selectedLocation) return;
+            
+            if (tab === 'fields') {
+                loadCustomFields();
+            } else if (tab === 'values') {
+                loadCustomValues();
+            } else {
+                loadLocationSettings();
+            }
+        }
+
+        async function loadCustomFields() {
+            if (!selectedLocation) return;
+            
+            const listEl = document.getElementById('fieldsList');
+            listEl.innerHTML = '<div class="loading">Loading custom fields...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-fields`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const fields = data.customFields || data.fields || [];
+                    
+                    if (fields && fields.length > 0) {
+                        allFields = fields;
+                        document.getElementById('fieldsToolbar').style.display = 'flex';
+                        document.getElementById('fieldsResultsInfo').style.display = 'flex';
+                        renderFieldsSimple();
+                    } else {
+                        document.getElementById('fieldsToolbar').style.display = 'none';
+                        document.getElementById('fieldsResultsInfo').style.display = 'none';
+                        allFields = [];
+                        listEl.innerHTML = '<div class="empty-state">No custom fields found</div>';
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to load fields');
+                }
+            } catch (error) {
+                document.getElementById('fieldsToolbar').style.display = 'none';
+                document.getElementById('fieldsResultsInfo').style.display = 'none';
+                listEl.innerHTML = `<div class="error-message">Failed to load custom fields: ${error.message}</div>`;
+            }
+        }
+
+        function renderFieldsSimple() {
+            const listEl = document.getElementById('fieldsList');
+            const searchTerm = document.getElementById('fieldsSearch')?.value?.toLowerCase() || '';
+            const typeFilter = document.getElementById('fieldsTypeFilter')?.value || '';
+            const modelFilter = document.getElementById('fieldsModelFilter')?.value || '';
+            
+            let filteredFields = allFields.filter(field => {
+                if (!field) return false;
+                const matchesSearch = !searchTerm || 
+                    (field.name && field.name.toLowerCase().includes(searchTerm)) ||
+                    (field.placeholder && field.placeholder.toLowerCase().includes(searchTerm));
+                const matchesType = !typeFilter || field.dataType === typeFilter;
+                const matchesModel = !modelFilter || field.model === modelFilter;
+                return matchesSearch && matchesType && matchesModel;
+            });
+            
+            const resultsCount = document.getElementById('fieldsResultsCount');
+            if (resultsCount) resultsCount.textContent = filteredFields.length;
+            
+            if (filteredFields.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No custom fields found</div>';
+                return;
+            }
+            
+            listEl.innerHTML = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-col">
+                                    <input type="checkbox" id="selectAllFields" onchange="toggleAllFields(this)">
+                                </th>
+                                <th class="name-col">Field Name</th>
+                                <th class="type-col">Type & Details</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filteredFields.map(field => {
+                                const fieldId = field.id || field._id || Math.random().toString(36);
+                                const displayName = field.name || 'Unnamed Field';
+                                const displayType = field.dataType || 'TEXT';
+                                const displayModel = field.model || 'contact';
+                                const isSelected = selectedFields.has(fieldId);
+                                
+                                return `
+                                    <tr class="${isSelected ? 'selected' : ''}" data-field-id="${fieldId}">
+                                        <td class="checkbox-col">
+                                            <input type="checkbox" 
+                                                   class="field-checkbox"
+                                                   ${isSelected ? 'checked' : ''}
+                                                   onchange="toggleFieldSelection('${fieldId}')">
+                                        </td>
+                                        <td class="name-cell">${displayName}</td>
+                                        <td class="type-cell">
+                                            <span class="field-type-badge">${displayType}</span>
+                                            <div style="margin-top: 4px; color: #9ca3af; font-size: 12px;">
+                                                Model: ${displayModel}
+                                                ${field.placeholder ? ` • Placeholder: ${field.placeholder}` : ''}
+                                            </div>
+                                        </td>
+                                        <td class="actions-cell">
+                                            <button class="btn btn-danger" onclick="deleteField('${fieldId}')">Delete</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function toggleAllFields(checkbox) {
+            const checkboxes = document.querySelectorAll('.field-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                const row = cb.closest('tr');
+                const fieldId = row.dataset.fieldId;
+                if (cb.checked) {
+                    selectedFields.add(fieldId);
+                    row.classList.add('selected');
+                } else {
+                    selectedFields.delete(fieldId);
+                    row.classList.remove('selected');
+                }
+            });
+            updateFieldsBulkActions();
+        }
+
+        function toggleFieldSelection(fieldId) {
+            if (selectedFields.has(fieldId)) {
+                selectedFields.delete(fieldId);
+            } else {
+                selectedFields.add(fieldId);
+            }
+            updateFieldsBulkActions();
+            renderFieldsSimple();
+        }
+
+        function updateFieldsBulkActions() {
+            const bulkBar = document.getElementById('fieldsBulkActions');
+            const selectedCount = document.getElementById('fieldsSelectedCount');
+            
+            selectedCount.textContent = selectedFields.size;
+            
+            if (selectedFields.size > 0) {
+                bulkBar.classList.add('show');
+            } else {
+                bulkBar.classList.remove('show');
+            }
+        }
+
+        function clearFieldsFilters() {
+            document.getElementById('fieldsSearch').value = '';
+            document.getElementById('fieldsTypeFilter').value = '';
+            document.getElementById('fieldsModelFilter').value = '';
+            renderFieldsSimple();
+        }
+
+        async function bulkDeleteFields() {
+            if (!confirm(`Are you sure you want to delete ${selectedFields.size} fields?`)) return;
+            
+            let deleted = 0;
+            let failed = 0;
+            
+            for (const fieldId of selectedFields) {
+                try {
+                    const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-fields/${fieldId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        deleted++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    failed++;
+                }
+            }
+            
+            selectedFields.clear();
+            updateFieldsBulkActions();
+            
+            if (deleted > 0) {
+                showMessage(`Successfully deleted ${deleted} fields${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+                loadCustomFields();
+            } else {
+                showMessage(`Failed to delete fields`, 'error');
+            }
+        }
+
+        function deselectAllFields() {
+            selectedFields.clear();
+            updateFieldsBulkActions();
+            renderFieldsSimple();
+        }
+
+        function exportFields() {
+            const dataToExport = selectedFields.size > 0 
+                ? allFields.filter(f => selectedFields.has(f.id))
+                : allFields;
+            
+            const json = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `custom-fields-${selectedLocation.name}-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function loadCustomValues() {
+            if (!selectedLocation) return;
+            
+            const listEl = document.getElementById('valuesList');
+            listEl.innerHTML = '<div class="loading">Loading custom values...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-values`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const values = data.customValues || data.values || [];
+                    
+                    if (values && values.length > 0) {
+                        allValues = values;
+                        document.getElementById('valuesToolbar').style.display = 'flex';
+                        document.getElementById('valuesResultsInfo').style.display = 'flex';
+                        renderValuesSimple();
+                    } else {
+                        document.getElementById('valuesToolbar').style.display = 'none';
+                        document.getElementById('valuesResultsInfo').style.display = 'none';
+                        allValues = [];
+                        listEl.innerHTML = '<div class="empty-state">No custom values found</div>';
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to load values');
+                }
+            } catch (error) {
+                document.getElementById('valuesToolbar').style.display = 'none';
+                document.getElementById('valuesResultsInfo').style.display = 'none';
+                listEl.innerHTML = `<div class="error-message">Failed to load custom values: ${error.message}</div>`;
+            }
+        }
+
+        function renderValuesSimple() {
+            const listEl = document.getElementById('valuesList');
+            const searchTerm = document.getElementById('valuesSearch')?.value?.toLowerCase() || '';
+            const sortOption = document.getElementById('valuesSortFilter')?.value || 'name-asc';
+            
+            let filteredValues = allValues.filter(value => {
+                if (!value) return false;
+                const matchesSearch = !searchTerm || 
+                    (value.name && value.name.toLowerCase().includes(searchTerm)) ||
+                    (value.value && value.value.toLowerCase().includes(searchTerm));
+                return matchesSearch;
+            });
+            
+            filteredValues.sort((a, b) => {
+                switch(sortOption) {
+                    case 'name-asc':
+                        return (a.name || '').localeCompare(b.name || '');
+                    case 'name-desc':
+                        return (b.name || '').localeCompare(a.name || '');
+                    case 'value-asc':
+                        return (a.value || '').localeCompare(b.value || '');
+                    case 'value-desc':
+                        return (b.value || '').localeCompare(a.value || '');
+                    default:
+                        return 0;
+                }
+            });
+            
+            const resultsCount = document.getElementById('valuesResultsCount');
+            if (resultsCount) resultsCount.textContent = filteredValues.length;
+            
+            if (filteredValues.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No custom values found</div>';
+                return;
+            }
+            
+            listEl.innerHTML = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-col">
+                                    <input type="checkbox" id="selectAllValues" onchange="toggleAllValues(this)">
+                                </th>
+                                <th class="name-col">Name</th>
+                                <th class="value-col">Value</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filteredValues.map(value => {
+                                const valueId = value.id || value._id || Math.random().toString(36);
+                                const displayValue = value.value || '';
+                                const displayName = value.name || 'Unnamed';
+                                const isSelected = selectedValues.has(valueId);
+                                const truncatedValue = displayValue.length > 150 ? displayValue.substring(0, 150) + '...' : displayValue;
+                                
+                                return `
+                                    <tr class="${isSelected ? 'selected' : ''}" data-value-id="${valueId}">
+                                        <td class="checkbox-col">
+                                            <input type="checkbox" 
+                                                   class="value-checkbox"
+                                                   ${isSelected ? 'checked' : ''}
+                                                   onchange="toggleValueSelection('${valueId}')">
+                                        </td>
+                                        <td class="name-cell">${displayName}</td>
+                                        <td class="value-cell">${truncatedValue}</td>
+                                        <td class="actions-cell">
+                                            <button class="btn btn-danger" onclick="deleteValue('${valueId}')">Delete</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function toggleAllValues(checkbox) {
+            const checkboxes = document.querySelectorAll('.value-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                const row = cb.closest('tr');
+                const valueId = row.dataset.valueId;
+                if (cb.checked) {
+                    selectedValues.add(valueId);
+                    row.classList.add('selected');
+                } else {
+                    selectedValues.delete(valueId);
+                    row.classList.remove('selected');
+                }
+            });
+            updateValuesBulkActions();
+        }
+
+        function toggleValueSelection(valueId) {
+            if (selectedValues.has(valueId)) {
+                selectedValues.delete(valueId);
+            } else {
+                selectedValues.add(valueId);
+            }
+            updateValuesBulkActions();
+            renderValuesSimple();
+        }
+
+        function updateValuesBulkActions() {
+            const bulkBar = document.getElementById('valuesBulkActions');
+            const selectedCount = document.getElementById('valuesSelectedCount');
+            
+            selectedCount.textContent = selectedValues.size;
+            
+            if (selectedValues.size > 0) {
+                bulkBar.classList.add('show');
+            } else {
+                bulkBar.classList.remove('show');
+            }
+        }
+
+        function clearValuesFilters() {
+            document.getElementById('valuesSearch').value = '';
+            renderValuesSimple();
+        }
+
+        async function bulkDeleteValues() {
+            if (!confirm(`Are you sure you want to delete ${selectedValues.size} values?`)) return;
+            
+            let deleted = 0;
+            let failed = 0;
+            
+            for (const valueId of selectedValues) {
+                try {
+                    const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-values/${valueId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        deleted++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    failed++;
+                }
+            }
+            
+            selectedValues.clear();
+            updateValuesBulkActions();
+            
+            if (deleted > 0) {
+                showMessage(`Successfully deleted ${deleted} values${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+                loadCustomValues();
+            } else {
+                showMessage(`Failed to delete values`, 'error');
+            }
+        }
+
+        function deselectAllValues() {
+            selectedValues.clear();
+            updateValuesBulkActions();
+            renderValuesSimple();
+        }
+
+        function exportValues() {
+            const dataToExport = selectedValues.size > 0 
+                ? allValues.filter(v => selectedValues.has(v.id))
+                : allValues;
+            
+            const json = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `custom-values-${selectedLocation.name}-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function bulkExportValues() {
+            const dataToExport = allValues.filter(v => selectedValues.has(v.id));
+            
+            const json = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `selected-values-${selectedLocation.name}-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importValues() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const values = JSON.parse(text);
+                    
+                    if (!Array.isArray(values)) {
+                        throw new Error('Invalid format: expected an array of values');
+                    }
+                    
+                    let imported = 0;
+                    let failed = 0;
+                    
+                    for (const value of values) {
+                        if (!value.name || !value.value) {
+                            failed++;
+                            continue;
+                        }
+                        
+                        try {
+                            const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-values`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    name: value.name,
+                                    value: value.value
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                imported++;
+                            } else {
+                                failed++;
+                            }
+                        } catch (error) {
+                            failed++;
+                        }
+                    }
+                    
+                    showMessage(`Imported ${imported} values${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+                    loadCustomValues();
+                } catch (error) {
+                    showMessage(`Import failed: ${error.message}`, 'error');
+                }
+            };
+            input.click();
+        }
+
+        function loadLocationSettings() {
+            if (!selectedLocation) return;
+            
+            const settingsEl = document.getElementById('locationSettings');
+            settingsEl.innerHTML = `
+                <div class="location-card">
+                    <div class="location-card-header">
+                        <div class="location-card-title">${selectedLocation.name}</div>
+                    </div>
+                    <div class="location-card-meta">
+                        <p><strong>Location ID:</strong> ${selectedLocation.locationId}</p>
+                        <p><strong>GHL Name:</strong> ${selectedLocation.ghlName || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${selectedLocation.email || 'N/A'}</p>
+                        <p><strong>Added:</strong> ${new Date(selectedLocation.addedAt).toLocaleString()}</p>
+                        <p><strong>Last Used:</strong> ${selectedLocation.lastUsed ? new Date(selectedLocation.lastUsed).toLocaleString() : 'Never'}</p>
+                        <p><strong>Token:</strong> ***hidden***</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupInputListeners() {
+            const nameInput = document.getElementById('valueName');
+            const warningEl = document.getElementById('nameWarning');
+            
+            if (nameInput) {
+                nameInput.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (value && /[\s\W]/.test(value)) {
+                        warningEl.classList.add('show');
+                    } else {
+                        warningEl.classList.remove('show');
+                    }
+                });
+            }
+        }
+
+        function launchConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const pieces = [];
+            const colors = ['#667eea', '#764ba2', '#48bb78', '#f59e0b', '#ef4444'];
+            
+            for (let i = 0; i < 150; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    w: Math.random() * 10 + 5,
+                    h: Math.random() * 5 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    vx: Math.random() * 2 - 1,
+                    vy: Math.random() * 5 + 3,
+                    rotation: Math.random() * 360,
+                    rotationSpeed: Math.random() * 10 - 5
+                });
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                pieces.forEach((piece, index) => {
+                    piece.y += piece.vy;
+                    piece.x += piece.vx;
+                    piece.rotation += piece.rotationSpeed;
+                    
+                    if (piece.y > canvas.height) {
+                        pieces.splice(index, 1);
+                    }
+                    
+                    ctx.save();
+                    ctx.translate(piece.x + piece.w/2, piece.y + piece.h/2);
+                    ctx.rotate(piece.rotation * Math.PI / 180);
+                    ctx.fillStyle = piece.color;
+                    ctx.fillRect(-piece.w/2, -piece.h/2, piece.w, piece.h);
+                    ctx.restore();
+                });
+                
+                if (pieces.length > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            
+            animate();
+        }
+
+        function updateProgress(percent, status) {
+            const progressFill = document.getElementById('progressFill');
+            const progressStatus = document.getElementById('progressStatus');
+            
+            if (progressFill) progressFill.style.width = percent + '%';
+            if (progressStatus) progressStatus.textContent = status;
+        }
+
+        function setupFilterListeners() {
+            const fieldsSearch = document.getElementById('fieldsSearch');
+            if (fieldsSearch) {
+                fieldsSearch.addEventListener('input', () => {
+                    if (allFields && allFields.length > 0) {
+                        renderFieldsSimple();
+                    }
+                });
+            }
+            
+            const fieldsTypeFilter = document.getElementById('fieldsTypeFilter');
+            if (fieldsTypeFilter) {
+                fieldsTypeFilter.addEventListener('change', () => {
+                    if (allFields && allFields.length > 0) {
+                        renderFieldsSimple();
+                    }
+                });
+            }
+            
+            const fieldsModelFilter = document.getElementById('fieldsModelFilter');
+            if (fieldsModelFilter) {
+                fieldsModelFilter.addEventListener('change', () => {
+                    if (allFields && allFields.length > 0) {
+                        renderFieldsSimple();
+                    }
+                });
+            }
+            
+            const valuesSearch = document.getElementById('valuesSearch');
+            if (valuesSearch) {
+                valuesSearch.addEventListener('input', () => {
+                    if (allValues && allValues.length > 0) {
+                        renderValuesSimple();
+                    }
+                });
+            }
+            
+            const valuesSortFilter = document.getElementById('valuesSortFilter');
+            if (valuesSortFilter) {
+                valuesSortFilter.addEventListener('change', () => {
+                    if (allValues && allValues.length > 0) {
+                        renderValuesSimple();
+                    }
+                });
+            }
+        }
+
+        function setupFormHandlers() {
+            document.getElementById('valueType').addEventListener('change', (e) => {
+                const textGroup = document.getElementById('textValueGroup');
+                const imageGroup = document.getElementById('imageUploadGroup');
+                const textArea = document.getElementById('valueContent');
+                const imageInput = document.getElementById('imageUpload');
+                
+                if (e.target.value === 'image') {
+                    textGroup.style.display = 'none';
+                    imageGroup.style.display = 'block';
+                    textArea.removeAttribute('required');
+                    imageInput.setAttribute('required', 'required');
+                } else {
+                    textGroup.style.display = 'block';
+                    imageGroup.style.display = 'none';
+                    textArea.setAttribute('required', 'required');
+                    imageInput.removeAttribute('required');
+                }
+            });
+            
+            document.getElementById('imageUpload').addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    showMessage('Please select a valid image file (PNG, JPG, GIF, WEBP)', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    showMessage('Image size must be less than 5MB', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('previewImg').src = event.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+                
+                if (!selectedLocation) {
+                    showMessage('Please select a location first', 'error');
+                    return;
+                }
+                
+                showMessage('Uploading image...', 'success');
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/upload-image`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        document.getElementById('imageUpload').dataset.imageUrl = result.imageUrl;
+                        document.getElementById('imageUrlDisplay').textContent = `URL: ${result.imageUrl}`;
+                        showMessage('Image uploaded successfully!', 'success');
+                    } else {
+                        showMessage(`Upload failed: ${result.error}`, 'error');
+                        e.target.value = '';
+                        document.getElementById('imagePreview').style.display = 'none';
+                    }
+                } catch (error) {
+                    showMessage(`Upload error: ${error.message}`, 'error');
+                    e.target.value = '';
+                    document.getElementById('imagePreview').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('addLocationForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    const testResponse = await fetch(`${API_BASE}/test-location`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            locationId: data.locationId,
+                            token: data.token
+                        })
+                    });
+                    
+                    const testResult = await testResponse.json();
+                    
+                    if (!testResult.success) {
+                        showMessage(`Connection failed: ${testResult.error}`, 'error');
+                        return;
+                    }
+                    
+                    const response = await fetch(`${API_BASE}/locations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showMessage('Location added successfully!', 'success');
+                        e.target.reset();
+                        closeModal('addLocationModal');
+                        await loadLocations();
+                        selectLocation(result.location.id);
+                    } else {
+                        showMessage(`Failed to add location: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    showMessage(`Error: ${error.message}`, 'error');
+                }
+            });
+            
+            document.getElementById('createFieldForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!selectedLocation) {
+                    showMessage('Please select a location first', 'error');
+                    return;
+                }
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-fields`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showMessage('Custom field created successfully!', 'success');
+                        e.target.reset();
+                        loadCustomFields();
+                    } else {
+                        showMessage(`Failed to create field: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    showMessage(`Error: ${error.message}`, 'error');
+                }
+            });
+            
+            document.getElementById('createValueForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!selectedLocation) {
+                    showMessage('Please select a location first', 'error');
+                    return;
+                }
+                
+                const formData = new FormData(e.target);
+                const valueType = document.getElementById('valueType').value;
+                
+                let data = {
+                    name: formData.get('name')
+                };
+                
+                if (valueType === 'image') {
+                    const imageUrl = document.getElementById('imageUpload').dataset.imageUrl;
+                    if (!imageUrl) {
+                        showMessage('Please upload an image first', 'error');
+                        return;
+                    }
+                    data.value = imageUrl;
+                } else {
+                    data.value = formData.get('value');
+                }
+                
+                const progressContainer = document.getElementById('progressContainer');
+                const successResult = document.getElementById('successResult');
+                const createBtn = document.getElementById('createValueBtn');
+                
+                successResult.classList.remove('show');
+                progressContainer.classList.add('show');
+                createBtn.disabled = true;
+                
+                updateProgress(10, 'Validating input...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const originalName = data.name;
+                const systemKey = originalName.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+                
+                updateProgress(30, 'Connecting to GoHighLevel...');
+                
+                try {
+                    updateProgress(50, 'Creating custom value...');
+                    
+                    const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-values`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    updateProgress(70, 'Processing response...');
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        updateProgress(100, 'Success! Custom value created.');
+                        
+                        setTimeout(() => {
+                            progressContainer.classList.remove('show');
+                            successResult.classList.add('show');
+                            
+                            document.getElementById('resultKey').textContent = result.customValue?.name || systemKey;
+                            document.getElementById('resultValue').textContent = result.customValue?.value || data.value;
+                            
+                            launchConfetti();
+                            
+                            e.target.reset();
+                            document.getElementById('nameWarning').classList.remove('show');
+                            document.getElementById('imagePreview').style.display = 'none';
+                            document.getElementById('imageUpload').value = '';
+                            document.getElementById('imageUpload').dataset.imageUrl = '';
+                            document.getElementById('valueType').value = 'text';
+                            document.getElementById('textValueGroup').style.display = 'block';
+                            document.getElementById('imageUploadGroup').style.display = 'none';
+                            document.getElementById('valueContent').setAttribute('required', 'required');
+                            
+                            loadCustomValues();
+                            createBtn.disabled = false;
+                            
+                            setTimeout(() => {
+                                successResult.classList.remove('show');
+                            }, 5000);
+                        }, 500);
+                        
+                    } else {
+                        progressContainer.classList.remove('show');
+                        createBtn.disabled = false;
+                        
+                        let errorHtml = `<div class="error-message">
+                            <strong>Failed to create custom value</strong>
+                            <div class="error-details">`;
+                        
+                        if (result.error?.includes('space') || result.error?.includes('invalid')) {
+                            errorHtml += `The name "${originalName}" may contain invalid characters. Try using "${systemKey}" instead.`;
+                        } else {
+                            errorHtml += result.error || 'Unknown error occurred';
+                        }
+                        
+                        errorHtml += `</div></div>`;
+                        
+                        const errorEl = document.createElement('div');
+                        errorEl.innerHTML = errorHtml;
+                        e.target.insertBefore(errorEl.firstChild, createBtn.nextSibling);
+                        
+                        setTimeout(() => {
+                            errorEl.firstChild?.remove();
+                        }, 5000);
+                    }
+                } catch (error) {
+                    progressContainer.classList.remove('show');
+                    createBtn.disabled = false;
+                    showMessage(`Network error: ${error.message}`, 'error');
+                }
+            });
+        }
+
+        async function deleteField(fieldId) {
+            if (!selectedLocation) return;
+            if (!confirm('Are you sure you want to delete this custom field?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-fields/${fieldId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Field deleted successfully!', 'success');
+                    loadCustomFields();
+                } else {
+                    showMessage(`Failed to delete field: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteValue(valueId) {
+            if (!selectedLocation) return;
+            if (!confirm('Are you sure you want to delete this custom value?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-values/${valueId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Value deleted successfully!', 'success');
+                    loadCustomValues();
+                } else {
+                    showMessage(`Failed to delete value: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showAddLocationModal() {
+            document.getElementById('addLocationModal').classList.add('show');
+        }
+
+        function showLocationSettings() {
+            const modal = document.getElementById('manageLocationsModal');
+            const listEl = document.getElementById('locationsList');
+            
+            if (currentLocations.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No locations added yet</div>';
+            } else {
+                listEl.innerHTML = currentLocations.map(location => `
+                    <div class="location-card">
+                        <div class="location-card-header">
+                            <div class="location-card-title">${location.name}</div>
+                        </div>
+                        <div class="location-card-meta">
+                            <p><strong>Location ID:</strong> ${location.locationId}</p>
+                            <p><strong>Added:</strong> ${new Date(location.addedAt).toLocaleString()}</p>
+                        </div>
+                        <div class="location-card-actions">
+                            <button class="btn btn-danger" onclick="deleteLocation('${location.id}')">Remove Location</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            modal.classList.add('show');
+        }
+
+        async function deleteLocation(locationId) {
+            if (!confirm('Are you sure you want to remove this location? This action cannot be undone.')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${locationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Location removed successfully!', 'success');
+                    await loadLocations();
+                    
+                    if (selectedLocation && selectedLocation.id === locationId) {
+                        selectedLocation = null;
+                        showNoLocation();
+                    }
+                    
+                    closeModal('manageLocationsModal');
+                } else {
+                    showMessage(`Failed to remove location: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showCloneFieldsModal() {
+            if (!selectedLocation) {
+                showMessage('Please select a location first', 'error');
+                return;
+            }
+            
+            if (selectedFields.size === 0) {
+                showMessage('Please select at least one field to copy', 'error');
+                return;
+            }
+            
+            const modal = document.getElementById('cloneFieldsModal');
+            document.getElementById('cloneFieldsCount').textContent = selectedFields.size;
+            document.getElementById('cloneFieldsSource').textContent = selectedLocation.name;
+            
+            const targetsDiv = document.getElementById('cloneFieldsTargets');
+            targetsDiv.innerHTML = '';
+            
+            const availableLocations = currentLocations.filter(loc => loc.id !== selectedLocation.id);
+            
+            if (availableLocations.length === 0) {
+                targetsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #718096;">No other locations available. Please add more locations first.</div>';
+            } else {
+                availableLocations.forEach(location => {
+                    const checkbox = document.createElement('div');
+                    checkbox.style.cssText = 'padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s;';
+                    checkbox.innerHTML = `
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="clone-target-checkbox" value="${location.id}" style="width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">${location.name}</span>
+                            <span style="color: #718096; font-size: 12px;">(${location.locationId})</span>
+                        </label>
+                    `;
+                    checkbox.addEventListener('mouseenter', () => checkbox.style.background = '#f7fafc');
+                    checkbox.addEventListener('mouseleave', () => checkbox.style.background = 'white');
+                    targetsDiv.appendChild(checkbox);
+                });
+            }
+            
+            // Reset UI
+            document.getElementById('cloneFieldsProgress').style.display = 'none';
+            document.getElementById('cloneFieldsResults').style.display = 'none';
+            const btn = document.getElementById('cloneFieldsBtn');
+            btn.disabled = false;
+            btn.textContent = 'Start Copying';
+            btn.onclick = executeCloneFields;
+            
+            modal.classList.add('show');
+        }
+
+        function showCloneValuesModal() {
+            if (!selectedLocation) {
+                showMessage('Please select a location first', 'error');
+                return;
+            }
+            
+            if (selectedValues.size === 0) {
+                showMessage('Please select at least one value to copy', 'error');
+                return;
+            }
+            
+            const modal = document.getElementById('cloneValuesModal');
+            document.getElementById('cloneValuesCount').textContent = selectedValues.size;
+            document.getElementById('cloneValuesSource').textContent = selectedLocation.name;
+            
+            const targetsDiv = document.getElementById('cloneValuesTargets');
+            targetsDiv.innerHTML = '';
+            
+            const availableLocations = currentLocations.filter(loc => loc.id !== selectedLocation.id);
+            
+            if (availableLocations.length === 0) {
+                targetsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #718096;">No other locations available. Please add more locations first.</div>';
+            } else {
+                availableLocations.forEach(location => {
+                    const checkbox = document.createElement('div');
+                    checkbox.style.cssText = 'padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s;';
+                    checkbox.innerHTML = `
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="clone-target-checkbox" value="${location.id}" style="width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">${location.name}</span>
+                            <span style="color: #718096; font-size: 12px;">(${location.locationId})</span>
+                        </label>
+                    `;
+                    checkbox.addEventListener('mouseenter', () => checkbox.style.background = '#f7fafc');
+                    checkbox.addEventListener('mouseleave', () => checkbox.style.background = 'white');
+                    targetsDiv.appendChild(checkbox);
+                });
+            }
+            
+            // Reset UI
+            document.getElementById('cloneValuesProgress').style.display = 'none';
+            document.getElementById('cloneValuesResults').style.display = 'none';
+            const btn = document.getElementById('cloneValuesBtn');
+            btn.disabled = false;
+            btn.textContent = 'Start Copying';
+            btn.onclick = executeCloneValues;
+            
+            modal.classList.add('show');
+        }
+
+        async function executeCloneFields() {
+            const checkboxes = document.querySelectorAll('#cloneFieldsTargets .clone-target-checkbox:checked');
+            const targetLocationIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (targetLocationIds.length === 0) {
+                showMessage('Please select at least one destination location', 'error');
+                return;
+            }
+            
+            const progressDiv = document.getElementById('cloneFieldsProgress');
+            const progressBar = document.getElementById('cloneFieldsProgressBar');
+            const statusDiv = document.getElementById('cloneFieldsStatus');
+            const resultsDiv = document.getElementById('cloneFieldsResults');
+            const resultsContent = document.getElementById('cloneFieldsResultsContent');
+            const btn = document.getElementById('cloneFieldsBtn');
+            
+            progressDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            btn.disabled = true;
+            
+            progressBar.style.width = '20%';
+            statusDiv.textContent = 'Preparing to copy fields...';
+            statusDiv.style.color = '#718096';
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/clone-fields`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        targetLocationIds: targetLocationIds,
+                        fieldIds: Array.from(selectedFields)
+                    })
+                });
+                
+                progressBar.style.width = '70%';
+                statusDiv.textContent = 'Processing response...';
+                
+                const result = await response.json();
+                
+                progressBar.style.width = '100%';
+                
+                if (result.success) {
+                    statusDiv.textContent = `Complete! Successfully copied ${result.results.success} field(s)${result.results.failed > 0 ? `, ${result.results.failed} failed` : ''}`;
+                    
+                    // Show detailed results
+                    setTimeout(() => {
+                        progressDiv.style.display = 'none';
+                        resultsDiv.style.display = 'block';
+                        
+                        let resultsHTML = `
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="display: flex; gap: 20px; margin-bottom: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 24px; font-weight: 700; color: #48bb78;">${result.results.success}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Successful</div>
+                                    </div>
+                                    <div id="fieldsFailedCounter" style="flex: 1; cursor: ${result.results.failed > 0 ? 'pointer' : 'default'};">
+                                        <div style="font-size: 24px; font-weight: 700; color: ${result.results.failed > 0 ? '#e53e3e' : '#718096'};">${result.results.failed}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Failed ${result.results.failed > 0 ? '(click to view)' : ''}</div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 24px; font-weight: 700; color: #667eea;">${targetLocationIds.length}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Locations</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Display results per location
+                        if (result.results.locationResults) {
+                            Object.values(result.results.locationResults).forEach(locResult => {
+                                const hasErrors = locResult.failed > 0;
+                                resultsHTML += `
+                                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${hasErrors ? '#e53e3e' : '#48bb78'};">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 600; color: #2d3748; margin-bottom: 4px;">${locResult.locationName}</div>
+                                                <div style="font-size: 13px; color: #718096;">
+                                                    ✓ ${locResult.success} succeeded
+                                                    ${locResult.failed > 0 ? `• ✗ ${locResult.failed} failed` : ''}
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-primary" onclick="switchToLocation('${locResult.locationId}')" style="padding: 8px 16px; font-size: 14px; white-space: nowrap;">
+                                                Switch to Location →
+                                            </button>
+                                        </div>
+                                `;
+                                
+                                // Show errors if any
+                                if (locResult.errors && locResult.errors.length > 0) {
+                                    resultsHTML += `
+                                        <div class="field-error-details" style="display: none; margin-top: 10px; padding: 10px; background: #fff5f5; border-radius: 6px; border: 1px solid #fed7d7;">
+                                            <div style="font-weight: 600; color: #c53030; margin-bottom: 8px; font-size: 13px;">Error Details:</div>
+                                    `;
+                                    
+                                    locResult.errors.forEach(error => {
+                                        resultsHTML += `
+                                            <div style="padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px; border-left: 3px solid #e53e3e;">
+                                                <div style="font-weight: 500; color: #2d3748; font-size: 13px; margin-bottom: 2px;">${error.itemName}</div>
+                                                <div style="color: #c53030; font-size: 12px;">${error.error}</div>
+                                            </div>
+                                        `;
+                                    });
+                                    
+                                    resultsHTML += `</div>`;
+                                }
+                                
+                                resultsHTML += `</div>`;
+                            });
+                        }
+                        
+                        resultsContent.innerHTML = resultsHTML;
+                        
+                        // Add event listener for clicking failed count
+                        if (result.results.failed > 0) {
+                            const failedCounter = document.getElementById('fieldsFailedCounter');
+                            if (failedCounter) {
+                                failedCounter.addEventListener('click', toggleAllFieldErrors);
+                            }
+                        }
+                        
+                        btn.textContent = 'Close';
+                        btn.onclick = () => {
+                            closeModal('cloneFieldsModal');
+                            selectedFields.clear();
+                            updateFieldsBulkActions();
+                            renderFieldsSimple();
+                        };
+                    }, 500);
+                    
+                    if (result.results.success > 0) {
+                        showMessage(`Successfully copied ${result.results.success} field(s)`, 'success');
+                    }
+                } else {
+                    throw new Error(result.error || 'Clone operation failed');
+                }
+            } catch (error) {
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.style.color = '#c53030';
+                btn.disabled = false;
+                showMessage(`Clone failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function executeCloneValues() {
+            const checkboxes = document.querySelectorAll('#cloneValuesTargets .clone-target-checkbox:checked');
+            const targetLocationIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (targetLocationIds.length === 0) {
+                showMessage('Please select at least one destination location', 'error');
+                return;
+            }
+            
+            const progressDiv = document.getElementById('cloneValuesProgress');
+            const progressBar = document.getElementById('cloneValuesProgressBar');
+            const statusDiv = document.getElementById('cloneValuesStatus');
+            const resultsDiv = document.getElementById('cloneValuesResults');
+            const resultsContent = document.getElementById('cloneValuesResultsContent');
+            const btn = document.getElementById('cloneValuesBtn');
+            
+            progressDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            btn.disabled = true;
+            
+            progressBar.style.width = '20%';
+            statusDiv.textContent = 'Preparing to copy values...';
+            statusDiv.style.color = '#718096';
+            
+            try {
+                const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/clone-values`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        targetLocationIds: targetLocationIds,
+                        valueIds: Array.from(selectedValues)
+                    })
+                });
+                
+                progressBar.style.width = '70%';
+                statusDiv.textContent = 'Processing response...';
+                
+                const result = await response.json();
+                
+                progressBar.style.width = '100%';
+                
+                if (result.success) {
+                    statusDiv.textContent = `Complete! Successfully copied ${result.results.success} value(s)${result.results.failed > 0 ? `, ${result.results.failed} failed` : ''}`;
+                    
+                    // Show detailed results
+                    setTimeout(() => {
+                        progressDiv.style.display = 'none';
+                        resultsDiv.style.display = 'block';
+                        
+                        let resultsHTML = `
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="display: flex; gap: 20px; margin-bottom: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 24px; font-weight: 700; color: #48bb78;">${result.results.success}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Successful</div>
+                                    </div>
+                                    <div id="valuesFailedCounter" style="flex: 1; cursor: ${result.results.failed > 0 ? 'pointer' : 'default'};">
+                                        <div style="font-size: 24px; font-weight: 700; color: ${result.results.failed > 0 ? '#e53e3e' : '#718096'};">${result.results.failed}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Failed ${result.results.failed > 0 ? '(click to view)' : ''}</div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 24px; font-weight: 700; color: #667eea;">${targetLocationIds.length}</div>
+                                        <div style="font-size: 12px; color: #718096; text-transform: uppercase;">Locations</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Display results per location
+                        if (result.results.locationResults) {
+                            Object.values(result.results.locationResults).forEach(locResult => {
+                                const hasErrors = locResult.failed > 0;
+                                resultsHTML += `
+                                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${hasErrors ? '#e53e3e' : '#48bb78'};">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 600; color: #2d3748; margin-bottom: 4px;">${locResult.locationName}</div>
+                                                <div style="font-size: 13px; color: #718096;">
+                                                    ✓ ${locResult.success} succeeded
+                                                    ${locResult.failed > 0 ? `• ✗ ${locResult.failed} failed` : ''}
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-primary" onclick="switchToLocation('${locResult.locationId}')" style="padding: 8px 16px; font-size: 14px; white-space: nowrap;">
+                                                Switch to Location →
+                                            </button>
+                                        </div>
+                                `;
+                                
+                                // Show errors if any
+                                if (locResult.errors && locResult.errors.length > 0) {
+                                    resultsHTML += `
+                                        <div class="value-error-details" style="display: none; margin-top: 10px; padding: 10px; background: #fff5f5; border-radius: 6px; border: 1px solid #fed7d7;">
+                                            <div style="font-weight: 600; color: #c53030; margin-bottom: 8px; font-size: 13px;">Error Details:</div>
+                                    `;
+                                    
+                                    locResult.errors.forEach(error => {
+                                        resultsHTML += `
+                                            <div style="padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px; border-left: 3px solid #e53e3e;">
+                                                <div style="font-weight: 500; color: #2d3748; font-size: 13px; margin-bottom: 2px;">${error.itemName}</div>
+                                                <div style="color: #c53030; font-size: 12px;">${error.error}</div>
+                                            </div>
+                                        `;
+                                    });
+                                    
+                                    resultsHTML += `</div>`;
+                                }
+                                
+                                resultsHTML += `</div>`;
+                            });
+                        }
+                        
+                        resultsContent.innerHTML = resultsHTML;
+                        
+                        // Add event listener for clicking failed count
+                        if (result.results.failed > 0) {
+                            const failedCounter = document.getElementById('valuesFailedCounter');
+                            if (failedCounter) {
+                                failedCounter.addEventListener('click', toggleAllValueErrors);
+                            }
+                        }
+                        
+                        btn.textContent = 'Close';
+                        btn.onclick = () => {
+                            closeModal('cloneValuesModal');
+                            selectedValues.clear();
+                            updateValuesBulkActions();
+                            renderValuesSimple();
+                        };
+                    }, 500);
+                    
+                    if (result.results.success > 0) {
+                        showMessage(`Successfully copied ${result.results.success} value(s)`, 'success');
+                    }
+                } else {
+                    throw new Error(result.error || 'Clone operation failed');
+                }
+            } catch (error) {
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.style.color = '#c53030';
+                btn.disabled = false;
+                showMessage(`Clone failed: ${error.message}`, 'error');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        function showMessage(message, type) {
+            const messageEl = document.createElement('div');
+            messageEl.className = type === 'error' ? 'error-message' : 'success-message';
+            messageEl.textContent = message;
+            messageEl.style.position = 'fixed';
+            messageEl.style.top = '20px';
+            messageEl.style.right = '20px';
+            messageEl.style.zIndex = '2000';
+            messageEl.style.maxWidth = '400px';
+            
+            document.body.appendChild(messageEl);
+            
+            setTimeout(() => messageEl.remove(), 5000);
+        }
+
+        function syncCustomValues() {
+            if (!selectedLocation) {
+                showMessage('Please select a location first', 'error');
+                return;
+            }
+            
+            showMessage('Syncing values...', 'success');
+            
+            fetch(`${API_BASE}/locations/${selectedLocation.id}/sync-values`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Values synced successfully!', 'success');
+                    loadCustomValues();
+                } else {
+                    showMessage(`Sync failed: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage(`Error: ${error.message}`, 'error');
+            });
+        }
+
+        function switchToLocation(locationId) {
+            // Close any open modals
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('show');
+            });
+            
+            // Switch to the location
+            selectLocation(locationId);
+            
+            // Update the dropdown
+            const dropdown = document.getElementById('locationDropdown');
+            dropdown.value = locationId;
+            
+            showMessage('Switched to destination location', 'success');
+        }
+
+        function toggleAllFieldErrors() {
+            const errorDivs = document.querySelectorAll('.field-error-details');
+            const allVisible = Array.from(errorDivs).every(div => div.style.display !== 'none');
+            
+            errorDivs.forEach(div => {
+                div.style.display = allVisible ? 'none' : 'block';
+            });
+        }
+
+        function toggleAllValueErrors() {
+            const errorDivs = document.querySelectorAll('.value-error-details');
+            const allVisible = Array.from(errorDivs).every(div => div.style.display !== 'none');
+            
+            errorDivs.forEach(div => {
+                div.style.display = allVisible ? 'none' : 'block';
+            });
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Onboarding Wizard</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="tab-onboard">
+  <div class="wizard-container">
+    <div class="wizard-header">
+      <img id="wizardLogo" class="wizard-logo" alt="Brand logo" />
+      <div class="wizard-header-text">
+        <h1 id="wizardTitle">Onboarding Wizard</h1>
+        <p id="wizardSubtitle"></p>
+      </div>
+    </div>
+    <div id="wizardProgress" class="wizard-progress"></div>
+    <div id="wizardSteps"></div>
+    <div class="wizard-actions">
+      <button id="backBtn" class="btn btn-secondary">Back</button>
+      <button id="nextBtn" class="btn btn-primary">Next</button>
+      <button id="submitBtn" class="btn btn-primary">Submit</button>
+    </div>
+    <div id="wizardStatus" class="wizard-status"></div>
+  </div>
+  <script src="./js/onboard.js"></script>
+</body>
+</html>

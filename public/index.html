@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHL CTRL</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <canvas id="confettiCanvas"></canvas>
+    
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>🚀 GHL CTRL</h1>
+            </div>
+            <div class="user-info" id="userInfo"></div>
+        </header>
+
+<div class="location-selector">
+    <select id="locationDropdown" class="location-dropdown">
+        <option value="">Select a location...</option>
+    </select>
+    <button class="btn btn-secondary" onclick="openConnectCrmModal()">🔗 Connect your CRM</button>
+    <button class="btn btn-primary" onclick="showAddLocationModal()">+ Add Location</button>
+    <button class="btn btn-secondary" onclick="showLocationSettings()">⚙️ Manage Locations</button>
+    <button class="btn btn-secondary" onclick="showCompareModal('values')">⚖️ Compare Locations</button>
+    <button class="btn btn-secondary" onclick="window.location.href='/admin/onboarding.html'">🧭 Onboarding Wizards</button>
+    <span id="connectionStatus" class="location-status"></span>
+</div>
+
+        <!-- Subscription Status Bar -->
+        <div id="subscription-bar" class="subscription-bar" style="display: none;">
+            <div class="subscription-info">
+                <span class="plan-badge" id="planBadge">Free Plan</span>
+                <span class="location-usage" id="locationUsage">0 / 4 locations</span>
+            </div>
+            <button class="btn btn-primary" id="upgradeBtn" onclick="showPricingModal()">Upgrade Plan</button>
+            <button class="btn btn-secondary" id="manageBillingBtn" onclick="manageBilling()" style="display: none;">Manage Billing</button>
+        </div>
+
+        <div class="main-content">
+            <div id="no-location" class="no-location">
+                <h2>No Location Selected</h2>
+                <p>Please select a location from the dropdown above or add a new location to get started.</p>
+                <button class="btn btn-primary" onclick="showAddLocationModal()">Add Your First Location</button>
+            </div>
+
+            <div id="location-content" style="display: none;">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('fields')">Custom Fields</button>
+                    <button class="tab" onclick="switchTab('values')">Custom Values</button>
+                    <button class="tab" onclick="switchTab('tags')">Tags</button>
+                    <button class="tab" onclick="switchTab('triggerLinks')">Trigger Links</button>
+                    <button class="tab" onclick="switchTab('media')">Media Library</button>
+                    <button class="tab" onclick="switchTab('social')">Social Profiles</button>
+                     <button class="tab" onclick="switchTab('settings')">Location Settings</button>
+</div>
+
+                <div id="fields-section" class="content-section active">
+                    <div class="card">
+                        <h2>Add New Custom Field</h2>
+                        <form id="createFieldForm">
+                            <div class="form-group">
+                                <label for="fieldName">Field Name *</label>
+                                <input type="text" id="fieldName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldDataType">Data Type *</label>
+                                <select id="fieldDataType" name="dataType" required>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary Amount</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldPlaceholder">Placeholder</label>
+                                <input type="text" id="fieldPlaceholder" name="placeholder">
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldModel">Model</label>
+                                <select id="fieldModel" name="model">
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create Field</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Fields</h2>
+                        
+                        <div class="toolbar" id="fieldsToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="fieldsSearch" class="search-input" placeholder="Search fields by name...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="fieldsTypeFilter" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                                
+                                <select id="fieldsModelFilter" class="filter-select">
+                                    <option value="">All Models</option>
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+
+                                <select id="fieldsSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="type-asc">Type (A-Z)</option>
+                                    <option value="type-desc">Type (Z-A)</option>
+                                    <option value="model-asc">Model (A-Z)</option>
+                                    <option value="model-desc">Model (Z-A)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="exportFields()">📥 Export</button>
+                                <button class="icon-btn" onclick="startFieldAudit()">🔍 Audit Usage</button>
+                                 <button class="icon-btn" onclick="showImportFieldsModal()">📤 Import CSV</button>
+                                <button class="icon-btn" onclick="showCompareModal('fields')">⚖️ Compare</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="fieldsSelectedCount">0</span> fields selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneFieldsModal()">📋 Clone to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteFields()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllFields()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="fieldsResultsCount" class="results-count">0</span> fields
+                            <button id="fieldsClearFilters" class="clear-filters" style="display: none;" onclick="clearFieldsFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="fieldsList" class="loading">Select a location to view custom fields...</div>
+                    </div>
+                </div>
+
+                <div id="social-section" class="content-section">
+                    <div class="card social-card">
+                        <div class="social-header">
+                            <div>
+                                <h2>Social Profiles</h2>
+                                <p>Monitor social integrations and see what’s coming next. Google connections are handled through the onboarding wizard experience.</p>
+                            </div>
+                        </div>
+                        <div id="socialProfilesBody" class="social-grid"></div>
+                    </div>
+                </div>
+
+                <div id="values-section" class="content-section">
+                    <div class="card">
+                        <h2>Add New Custom Value</h2>
+                        <form id="createValueForm">
+                            <div class="form-group">
+                                <label for="valueName">Value Name *</label>
+                                <input type="text" id="valueName" name="name" required>
+                                <div id="nameWarning" class="warning-message">⚠️ Name contains special characters that may need to be converted</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="valueType">Value Type *</label>
+                                <select id="valueType" name="valueType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                    <option value="text">Text Value</option>
+                                    <option value="image">Image URL (Upload Image)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="textValueGroup">
+                                <label for="valueContent">Value *</label>
+                                <textarea id="valueContent" name="value" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="form-group" id="imageUploadGroup" style="display: none;">
+                                <label for="imageUpload">Upload Image *</label>
+                                <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                                <small style="color: #718096; display: block; margin-top: 5px;">
+                                    Upload an image (PNG, JPG, GIF, WEBP, max 5MB). The value will be set to the image URL.
+                                </small>
+                                <div id="imagePreview" style="display: none; margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                    <img id="previewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 10px;">
+                                    <div style="margin-top: 8px; color: #667eea; font-size: 13px; font-weight: 500;" id="imageUrlDisplay"></div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="createValueBtn">Create Value</button>
+                            
+                            <div id="progressContainer" class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <div class="progress-status" id="progressStatus">Initializing...</div>
+                            </div>
+                            
+                            <div id="successResult" class="success-result">
+                                <h3 style="color: #22543d; margin-bottom: 15px;">✅ Custom Value Created Successfully!</h3>
+                                <div class="result-key-value">
+                                    <div class="result-label">Key (System Name)</div>
+                                    <div class="result-value" id="resultKey"></div>
+                                </div>
+                                <div class="result-key-value">
+                                    <div class="result-label">Value</div>
+                                    <div class="result-value" id="resultValue"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Values</h2>
+                        
+                        <div class="toolbar" id="valuesToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="valuesSearch" class="search-input" placeholder="Search values by name or content...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="valuesSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="value-asc">Value (A-Z)</option>
+                                    <option value="value-desc">Value (Z-A)</option>
+                                </select>
+                            </div>
+                            
+                           <div class="action-buttons">
+    <button class="icon-btn" onclick="toggleValuesView('list')" id="valuesListViewBtn">📋 List</button>
+    <button class="icon-btn" onclick="toggleValuesView('gallery')" id="valuesGalleryViewBtn">🖼️ Gallery</button>
+    <button class="icon-btn" onclick="exportValues()">📥 Export</button>
+    <button class="icon-btn" onclick="showImportValuesModal()">📤 Import CSV</button>
+    <button class="icon-btn" onclick="syncCustomValues()">🔄 Sync</button>
+</div>
+                        </div>
+                        
+                        <div id="valuesBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="valuesSelectedCount">0</span> values selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneValuesModal()">📋 Copy to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteValues()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="bulkExportValues()">Export Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllValues()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="valuesResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="valuesResultsCount" class="results-count">0</span> values
+                            <button id="valuesClearFilters" class="clear-filters" style="display: none;" onclick="clearValuesFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="valuesList" class="loading">Select a location to view custom values...</div>
+                    </div>
+                </div>
+
+                <div id="tags-section" class="content-section">
+                    <div class="card">
+                        <h2>Create Tag</h2>
+                        <form id="createTagForm">
+                            <div class="form-group">
+                                <label for="tagName">Tag Name *</label>
+                                <input type="text" id="tagName" name="name" required pattern="[A-Za-z0-9_-]+" title="Only letters, numbers, underscores, or hyphens.">
+                                <small style="color: #718096; display:block; margin-top:4px;">Only letters, numbers, underscores, or hyphens. No spaces.</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="createTagBtn">Create Tag</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Tags</h2>
+                        <div class="toolbar" id="tagsToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="tagsSearch" class="search-input" placeholder="Search tags...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            <div class="filter-group">
+                                <select id="tagsSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="created-desc">Newest First</option>
+                                    <option value="created-asc">Oldest First</option>
+                                </select>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="showCompareModal('tags')">⚖️ Compare</button>
+                            </div>
+                        </div>
+
+                        <div id="tagsBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="tagsSelectedCount">0</span> tags selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="bulkDeleteTags()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllTags()">Clear Selection</button>
+                            </div>
+                        </div>
+
+                        <div id="tagsResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="tagsResultsCount" class="results-count">0</span> tags
+                            <button id="tagsClearFilters" class="clear-filters" style="display: none;" onclick="clearTagsFilters()">Clear Filters</button>
+                        </div>
+
+                        <div id="tagsList" class="loading">Select a location to view tags...</div>
+                    </div>
+                </div>
+
+                <div id="triggerLinks-section" class="content-section">
+                    <div class="card">
+                        <h2>Create Trigger Link</h2>
+                        <form id="createTriggerLinkForm">
+                            <div class="form-group">
+                                <label for="triggerLinkName">Link Name *</label>
+                                <input type="text" id="triggerLinkName" name="name" required placeholder="Welcome Link">
+                            </div>
+                            <div class="form-group">
+                                <label for="triggerLinkRedirect">Redirect URL *</label>
+                                <input type="url" id="triggerLinkRedirect" name="redirectTo" required placeholder="https://www.example.com/thank-you">
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="createTriggerLinkBtn">Create Trigger Link</button>
+                            
+                            <div id="triggerLinksProgressContainer" class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="triggerLinksProgressFill"></div>
+                                </div>
+                                <div class="progress-status" id="triggerLinksProgressStatus">Preparing...</div>
+                            </div>
+                            
+                            <div id="triggerLinksSuccessResult" class="success-result">
+                                <h3 style="color: #22543d; margin-bottom: 15px;">✅ Trigger Link Created!</h3>
+                                <div class="result-key-value">
+                                    <div class="result-label">Name</div>
+                                    <div class="result-value" id="triggerLinksResultName"></div>
+                                </div>
+                                <div class="result-key-value">
+                                    <div class="result-label">Redirect</div>
+                                    <div class="result-value" id="triggerLinksResultRedirect"></div>
+                                </div>
+                                <div class="result-key-value" id="triggerLinksResultShortWrapper" style="display: none;">
+                                    <div class="result-label">Short URL</div>
+                                    <div class="result-value" id="triggerLinksResultShort"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Trigger Links</h2>
+                        
+                        <div class="toolbar" id="triggerLinksToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="triggerLinksSearch" class="search-input" placeholder="Search trigger links...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="triggerLinksSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="created-desc">Newest First</option>
+                                    <option value="created-asc">Oldest First</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="showCompareModal('links')">⚖️ Compare</button>
+                                <button class="icon-btn" onclick="exportTriggerLinks()">📥 Export</button>
+                            </div>
+                        </div>
+                        
+                        <div id="triggerLinksBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="triggerLinksSelectedCount">0</span> trigger links selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="bulkDeleteTriggerLinks()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllTriggerLinks()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="triggerLinksResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="triggerLinksResultsCount" class="results-count">0</span> trigger links
+                            <button id="triggerLinksClearFilters" class="clear-filters" style="display: none;" onclick="clearTriggerLinksFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="triggerLinksList" class="loading">Select a location to view trigger links...</div>
+                    </div>
+                </div>
+
+                <div id="settings-section" class="content-section">
+                    <div class="card">
+                        <h2>Location Settings</h2>
+                        <div id="locationSettings"></div>
+                    </div>
+                </div>
+                <div id="settings-section" class="content-section">
+                    <div class="card">
+                        <h2>Location Settings</h2>
+                        <div id="locationSettings"></div>
+                    </div>
+                </div>
+
+                <!-- ADD THIS MEDIA SECTION HERE -->
+                <div id="media-section" class="content-section">
+                    <div class="card">
+                        <h2>Media Library</h2>
+                        
+                        <div class="toolbar" id="mediaToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="mediaSearch" class="search-input" placeholder="Search files...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="toggleMediaView('list')" id="mediaListViewBtn">📋 List</button>
+                                <button class="icon-btn" onclick="toggleMediaView('grid')" id="mediaGridViewBtn">🔲 Grid</button>
+                                <button class="icon-btn" onclick="toggleMediaView('gallery')" id="mediaGalleryViewBtn">🖼️ Gallery</button>
+                                <button class="icon-btn" onclick="uploadMedia()">📤 Upload</button>
+                            </div>
+                        </div>
+                        
+                        <div id="mediaResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="mediaResultsCount" class="results-count">0</span> files
+                        </div>
+                        
+                        <div id="mediaBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="mediaSelectedCount">0</span> files selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="bulkDeleteMedia()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllMedia()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="mediaList" class="loading">Select a location to view media files...</div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="connectCrmModal" class="modal">
+        <div class="modal-content connect-crm-modal">
+            <div class="modal-header">
+                <h2>Connect Your CRM</h2>
+                <button class="close-modal" onclick="closeModal('connectCrmModal')">×</button>
+            </div>
+            <div class="connect-modal-body">
+                <div class="connect-option primary">
+                    <div class="option-icon">🧩</div>
+                    <h3>Install Marketplace App</h3>
+                    <p>Kick off HighLevel’s OAuth install flow to connect an agency or sub-account with refreshable access tokens.</p>
+                    <button class="btn btn-primary" onclick="startMarketplaceInstall()">Install Marketplace App</button>
+                    <small>Recommended for managed installs and shared agency access.</small>
+                </div>
+                <div class="connect-option">
+                    <div class="option-icon">🔐</div>
+                    <h3>Use Private Integration Token</h3>
+                    <p>Paste the Private Integration token you created inside the HighLevel sub-account. Great for quick tests and legacy setups.</p>
+                    <button class="btn btn-secondary" onclick="beginPrivateTokenFlow()">Use Private Integration Token</button>
+                    <small>Scopes required: locations, custom fields, custom values.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addLocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Location</h2>
+                <button class="close-modal" onclick="closeModal('addLocationModal')">×</button>
+            </div>
+            <form id="addLocationForm">
+                <div class="form-group">
+                    <label for="locationName">Location Name *</label>
+                    <input type="text" id="locationName" name="name" required placeholder="e.g., Main Office, Client ABC">
+                </div>
+                <div class="form-group">
+                    <label for="locationId">GoHighLevel Location ID *</label>
+                    <input type="text" id="locationId" name="locationId" required placeholder="e.g., iXTmrCkWtZKXWzs85Jx8">
+                </div>
+                <div class="form-group">
+                    <label for="locationToken">Private Integration Token *</label>
+                    <input type="password" id="locationToken" name="token" required placeholder="pit-xxxxx...">
+                    <small style="color: #718096; display: block; margin-top: 5px;">Create a Private Integration in this location - go to Settings -> Private Integrations -> Create new Private Integration<br>Ensure that locations, edit/view custom fields and edit/view values are included in scopes.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Test & Add Location</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageLocationsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Locations</h2>
+                <button class="close-modal" onclick="closeModal('manageLocationsModal')">×</button>
+            </div>
+            <div id="locationsList"></div>
+        </div>
+    </div>
+
+    <div id="pricingModal" class="modal">
+        <div class="modal-content pricing-modal-content">
+            <div class="modal-header">
+                <h2>Choose Your Plan</h2>
+                <button class="close-modal" onclick="closeModal('pricingModal')">×</button>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Free</h3>
+                        <div class="pricing-price">$0<span>/month</span></div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">✓ Up to 4 locations</div>
+                        <div class="pricing-feature">✓ All features included</div>
+                        <div class="pricing-feature">✓ Community support</div>
+                    </div>
+                    <button class="btn btn-secondary" disabled id="freePlanBtn">Current Plan</button>
+                </div>
+
+                <div class="pricing-card pricing-popular">
+                    <div class="popular-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Starter</h3>
+                        <div class="pricing-price">$12.99<span>/month</span></div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">✓ Up to 10 locations</div>
+                        <div class="pricing-feature">✓ All features included</div>
+                        <div class="pricing-feature">✓ Priority support</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="selectPlan('starter')">Choose Starter</button>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Growth</h3>
+                        <div class="pricing-price">$24.99<span>/month</span></div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">✓ Up to 50 locations</div>
+                        <div class="pricing-feature">✓ All features included</div>
+                        <div class="pricing-feature">✓ Priority support</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="selectPlan('growth')">Choose Growth</button>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Scale</h3>
+                        <div class="pricing-price">$59.99<span>/month</span></div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">✓ Up to 250 locations</div>
+                        <div class="pricing-feature">✓ All features included</div>
+                        <div class="pricing-feature">✓ Premium support</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="selectPlan('scale')">Choose Scale</button>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Enterprise</h3>
+                        <div class="pricing-price">$99<span>/month</span></div>
+                    </div>
+                    <div class="pricing-features">
+                        <div class="pricing-feature">✓ Unlimited locations</div>
+                        <div class="pricing-feature">✓ All features included</div>
+                        <div class="pricing-feature">✓ Dedicated support</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="selectPlan('enterprise')">Choose Enterprise</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="upgradeLimitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚠️ Location Limit Reached</h2>
+                <button class="close-modal" onclick="closeModal('upgradeLimitModal')">×</button>
+            </div>
+            <div style="padding: 20px;">
+                <p style="margin-bottom: 20px; color: #4a5568; font-size: 16px;">
+                    You've reached the maximum number of locations for your <strong id="currentPlanName">Free</strong> plan.
+                </p>
+                <p style="margin-bottom: 20px; color: #718096;">
+                    Current usage: <strong id="currentUsage">0 / 4</strong> locations
+                </p>
+                <p style="margin-bottom: 30px; color: #4a5568;">
+                    Upgrade your plan to add more locations and unlock greater capabilities.
+                </p>
+                <button class="btn btn-primary" onclick="showPricingModalFromLimit()" style="width: 100%;">View Upgrade Options</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloneFieldsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Fields to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneFieldsModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneFieldsCount">0</strong> field(s) from <strong id="cloneFieldsSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneFieldsTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;"></div>
+            </div>
+            <div id="cloneFieldsProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneFieldsProgressBar"></div>
+                </div>
+                <div id="cloneFieldsStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneFieldsResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneFieldsResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneFields()" id="cloneFieldsBtn">Start Copying</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneFieldsModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloneValuesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Values to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneValuesModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneValuesCount">0</strong> value(s) from <strong id="cloneValuesSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneValuesTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;"></div>
+            </div>
+            <div id="cloneValuesProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneValuesProgressBar"></div>
+                </div>
+                <div id="cloneValuesStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneValuesResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneValuesResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneValues()" id="cloneValuesBtn">Start Copying</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneValuesModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+
+    <!-- Comparison Modal -->
+<div id="comparisonModal" class="modal">
+    <div class="modal-content comparison-modal-content">
+        <div class="modal-header">
+            <h2>Compare Locations</h2>
+            <button class="close-modal" onclick="closeModal('comparisonModal')">×</button>
+        </div>
+        
+        <div class="comparison-setup">
+            <div class="location-selector-group">
+                <div class="form-group">
+                    <label>Location A</label>
+                    <select id="compareLocationA" class="filter-select"></select>
+                </div>
+                <div class="comparison-vs">VS</div>
+                <div class="form-group">
+                    <label>Location B</label>
+                    <select id="compareLocationB" class="filter-select"></select>
+                </div>
+            </div>
+            
+            <div class="comparison-type-tabs">
+                <button class="comparison-tab active" data-type="values">Custom Values</button>
+                <button class="comparison-tab" data-type="fields">Custom Fields</button>
+                <button class="comparison-tab" data-type="links">Trigger Links</button>
+                <button class="comparison-tab" data-type="tags">Tags</button>
+                <button class="comparison-tab" data-type="both">Both</button>
+            </div>
+            
+            <button class="btn btn-primary" onclick="runComparison()" id="runComparisonBtn">Run Comparison</button>
+        </div>
+        
+        <div id="comparisonResults" style="display: none;">
+            <div class="comparison-stats"></div>
+            
+            <div class="comparison-tabs">
+               <button class="comp-view-tab active" onclick="switchCompView('all', this)">All Results</button>
+                <button class="comp-view-tab" onclick="switchCompView('differences', this)">Differences Only</button>
+                <button class="comp-view-tab" onclick="switchCompView('matches', this)">Matches Only</button>
+            </div>
+            
+            <div id="comparisonContent" class="comparison-container"></div>
+            
+            <div class="comparison-actions">
+                <button class="btn btn-secondary" onclick="exportComparison()">📥 Export Results</button>
+                <button class="btn btn-primary" onclick="showSyncOptions()">🔄 Sync Items</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Import Fields Instructions Modal -->
+<div id="importFieldsInstructionsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Custom Fields - CSV Format</h2>
+            <button class="close-modal" onclick="closeModal('importFieldsInstructionsModal')">×</button>
+        </div>
+        <div style="padding: 20px;">
+            <h3 style="margin-bottom: 15px;">CSV Format Requirements:</h3>
+<ul style="margin-bottom: 20px; line-height: 1.8;">
+    <li><strong>Column 1:</strong> Field Name (required)</li>
+    <li><strong>Column 2:</strong> Data Type (required) - TEXT, NUMBER, PHONE, DATE, DROPDOWN, RADIO, etc.</li>
+    <li><strong>Column 3:</strong> Model (optional, defaults to "contact") - contact or opportunity</li>
+    <li><strong>Column 4:</strong> Options (required for DROPDOWN/RADIO) - Pipe-separated values: Option1|Option2|Option3</li>
+</ul>
+
+<h3 style="margin-bottom: 15px;">Example CSV:</h3>
+<pre style="background: #f7fafc; padding: 15px; border-radius: 8px; overflow-x: auto;">Name,DataType,Model,Options
+Email Address,TEXT,contact,
+Phone Number,PHONE,contact,
+Lead Source,DROPDOWN,contact,Website|Referral|Social Media|Cold Call
+Priority Level,RADIO,opportunity,Low|Medium|High|Urgent</pre>
+            
+            <div style="background: #fff5eb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ed8936;">
+                <strong>Valid Data Types:</strong> TEXT, TEXTBOX_LIST, NUMBER, PHONE, MONETARYAMOUNT, CHECKBOX, DROPDOWN, RADIO, DATE
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="downloadFieldsTemplate()">Download Template</button>
+                <button class="btn btn-primary" onclick="closeModal('importFieldsInstructionsModal'); importFields();">Continue to Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Values Instructions Modal -->
+<div id="importValuesInstructionsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Custom Values - CSV Format</h2>
+            <button class="close-modal" onclick="closeModal('importValuesInstructionsModal')">×</button>
+        </div>
+        <div style="padding: 20px;">
+            <h3 style="margin-bottom: 15px;">CSV Format Requirements:</h3>
+            <ul style="margin-bottom: 20px; line-height: 1.8;">
+                <li><strong>Column 1:</strong> Value Name (required) - This becomes the system key</li>
+                <li><strong>Column 2:</strong> Value Content (required) - The actual value/text/URL</li>
+            </ul>
+            
+            <h3 style="margin-bottom: 15px;">Example CSV:</h3>
+            <pre style="background: #f7fafc; padding: 15px; border-radius: 8px; overflow-x: auto;">Name,Value
+company_logo,https://example.com/logo.png
+welcome_text,Welcome to our platform!
+support_email,support@example.com</pre>
+            
+            <div style="background: #e6f7ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
+                <strong>Tip:</strong> Values can be text, numbers, URLs, or any other content you need to reference in your workflows.
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="downloadValuesTemplate()">Download Template</button>
+                <button class="btn btn-primary" onclick="closeModal('importValuesInstructionsModal'); importValues();">Continue to Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Field Audit Modal -->
+<div id="fieldAuditModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2>Field Usage Audit</h2>
+            <button class="close-modal" onclick="closeModal('fieldAuditModal')">×</button>
+        </div>
+        
+        <div id="auditProgress" style="padding: 40px; text-align: center;">
+            <div class="progress-bar" style="margin-bottom: 20px;">
+                <div class="progress-fill" style="width: 50%;"></div>
+            </div>
+            <p>Analyzing field usage across contacts and opportunities...</p>
+            <p style="color: #718096; font-size: 14px; margin-top: 10px;">This may take a minute for large datasets</p>
+        </div>
+        
+        <div id="auditResults" style="display: none; padding: 20px;">
+            <div class="audit-summary"></div>
+            <div class="audit-charts"></div>
+            <div class="audit-unused-section"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

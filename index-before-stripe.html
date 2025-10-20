@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHL CTRL</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <canvas id="confettiCanvas"></canvas>
+    
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>🚀 GHL CTRL</h1>
+            </div>
+            <div class="user-info" id="userInfo"></div>
+        </header>
+
+        <div class="location-bar">
+            <div class="location-selector">
+                <select id="locationDropdown" class="location-dropdown">
+                    <option value="">Select a location...</option>
+                </select>
+                <button class="btn btn-primary" onclick="showAddLocationModal()">+ Add Location</button>
+                <button class="btn btn-secondary" onclick="showLocationSettings()">⚙️ Manage Locations</button>
+                <span id="connectionStatus" class="location-status"></span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="no-location" class="no-location">
+                <h2>No Location Selected</h2>
+                <p>Please select a location from the dropdown above or add a new location to get started.</p>
+                <button class="btn btn-primary" onclick="showAddLocationModal()">Add Your First Location</button>
+            </div>
+
+            <div id="location-content" style="display: none;">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('fields')">Custom Fields</button>
+                    <button class="tab" onclick="switchTab('values')">Custom Values</button>
+                    <button class="tab" onclick="switchTab('settings')">Location Settings</button>
+                </div>
+
+                <div id="fields-section" class="content-section active">
+                    <div class="card">
+                        <h2>Add New Custom Field</h2>
+                        <form id="createFieldForm">
+                            <div class="form-group">
+                                <label for="fieldName">Field Name *</label>
+                                <input type="text" id="fieldName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldDataType">Data Type *</label>
+                                <select id="fieldDataType" name="dataType" required>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary Amount</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldPlaceholder">Placeholder</label>
+                                <input type="text" id="fieldPlaceholder" name="placeholder">
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldModel">Model</label>
+                                <select id="fieldModel" name="model">
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create Field</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Fields</h2>
+                        
+                        <div class="toolbar" id="fieldsToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="fieldsSearch" class="search-input" placeholder="Search fields by name...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="fieldsTypeFilter" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <option value="TEXT">Text</option>
+                                    <option value="TEXTBOX_LIST">Textbox List</option>
+                                    <option value="NUMBER">Number</option>
+                                    <option value="PHONE">Phone</option>
+                                    <option value="MONETARYAMOUNT">Monetary</option>
+                                    <option value="CHECKBOX">Checkbox</option>
+                                    <option value="DROPDOWN">Dropdown</option>
+                                    <option value="RADIO">Radio</option>
+                                    <option value="DATE">Date</option>
+                                </select>
+                                
+                                <select id="fieldsModelFilter" class="filter-select">
+                                    <option value="">All Models</option>
+                                    <option value="contact">Contact</option>
+                                    <option value="opportunity">Opportunity</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="exportFields()">📥 Export</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="fieldsSelectedCount">0</span> fields selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneFieldsModal()">📋 Clone to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteFields()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllFields()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="fieldsResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="fieldsResultsCount" class="results-count">0</span> fields
+                            <button id="fieldsClearFilters" class="clear-filters" style="display: none;" onclick="clearFieldsFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="fieldsList" class="loading">Select a location to view custom fields...</div>
+                    </div>
+                </div>
+
+                <div id="values-section" class="content-section">
+                    <div class="card">
+                        <h2>Add New Custom Value</h2>
+                        <form id="createValueForm">
+                            <div class="form-group">
+                                <label for="valueName">Value Name *</label>
+                                <input type="text" id="valueName" name="name" required>
+                                <div id="nameWarning" class="warning-message">⚠️ Name contains special characters that may need to be converted</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="valueType">Value Type *</label>
+                                <select id="valueType" name="valueType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                    <option value="text">Text Value</option>
+                                    <option value="image">Image URL (Upload Image)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="textValueGroup">
+                                <label for="valueContent">Value *</label>
+                                <textarea id="valueContent" name="value" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="form-group" id="imageUploadGroup" style="display: none;">
+                                <label for="imageUpload">Upload Image *</label>
+                                <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                                <small style="color: #718096; display: block; margin-top: 5px;">
+                                    Upload an image (PNG, JPG, GIF, WEBP, max 5MB). The value will be set to the image URL.
+                                </small>
+                                <div id="imagePreview" style="display: none; margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                    <img id="previewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 10px;">
+                                    <div style="margin-top: 8px; color: #667eea; font-size: 13px; font-weight: 500;" id="imageUrlDisplay"></div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="createValueBtn">Create Value</button>
+                            
+                            <div id="progressContainer" class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <div class="progress-status" id="progressStatus">Initializing...</div>
+                            </div>
+                            
+                            <div id="successResult" class="success-result">
+                                <h3 style="color: #22543d; margin-bottom: 15px;">✅ Custom Value Created Successfully!</h3>
+                                <div class="result-key-value">
+                                    <div class="result-label">Key (System Name)</div>
+                                    <div class="result-value" id="resultKey"></div>
+                                </div>
+                                <div class="result-key-value">
+                                    <div class="result-label">Value</div>
+                                    <div class="result-value" id="resultValue"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Existing Custom Values</h2>
+                        
+                        <div class="toolbar" id="valuesToolbar" style="display: none;">
+                            <div class="search-box">
+                                <input type="text" id="valuesSearch" class="search-input" placeholder="Search values by name or content...">
+                                <span class="search-icon">🔍</span>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="valuesSortFilter" class="filter-select">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="value-asc">Value (A-Z)</option>
+                                    <option value="value-desc">Value (Z-A)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="icon-btn" onclick="exportValues()">📥 Export</button>
+                                <button class="icon-btn" onclick="importValues()">📤 Import</button>
+                                <button class="icon-btn" onclick="syncCustomValues()">🔄 Sync</button>
+                            </div>
+                        </div>
+                        
+                        <div id="valuesBulkActions" class="bulk-actions">
+                            <div class="bulk-info">
+                                <span id="valuesSelectedCount">0</span> values selected
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" onclick="showCloneValuesModal()">📋 Copy to Location</button>
+                                <button class="bulk-btn" onclick="bulkDeleteValues()">Delete Selected</button>
+                                <button class="bulk-btn" onclick="bulkExportValues()">Export Selected</button>
+                                <button class="bulk-btn" onclick="deselectAllValues()">Clear Selection</button>
+                            </div>
+                        </div>
+                        
+                        <div id="valuesResultsInfo" class="results-info" style="display: none;">
+                            Showing <span id="valuesResultsCount" class="results-count">0</span> values
+                            <button id="valuesClearFilters" class="clear-filters" style="display: none;" onclick="clearValuesFilters()">Clear Filters</button>
+                        </div>
+                        
+                        <div id="valuesList" class="loading">Select a location to view custom values...</div>
+                    </div>
+                </div>
+
+                <div id="settings-section" class="content-section">
+                    <div class="card">
+                        <h2>Location Settings</h2>
+                        <div id="locationSettings"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addLocationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Location</h2>
+                <button class="close-modal" onclick="closeModal('addLocationModal')">×</button>
+            </div>
+            <form id="addLocationForm">
+                <div class="form-group">
+                    <label for="locationName">Location Name *</label>
+                    <input type="text" id="locationName" name="name" required placeholder="e.g., Main Office, Client ABC">
+                </div>
+                <div class="form-group">
+                    <label for="locationId">GoHighLevel Location ID *</label>
+                    <input type="text" id="locationId" name="locationId" required placeholder="e.g., iXTmrCkWtZKXWzs85Jx8">
+                </div>
+                <div class="form-group">
+                    <label for="locationToken">Private Integration Token *</label>
+                    <input type="password" id="locationToken" name="token" required placeholder="pit-xxxxx...">
+                    <small style="color: #718096; display: block; margin-top: 5px;">Create a Private Integration in this location's GoHighLevel settings</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Test & Add Location</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageLocationsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Locations</h2>
+                <button class="close-modal" onclick="closeModal('manageLocationsModal')">×</button>
+            </div>
+            <div id="locationsList"></div>
+        </div>
+    </div>
+
+    <div id="cloneFieldsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Fields to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneFieldsModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneFieldsCount">0</strong> field(s) from <strong id="cloneFieldsSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneFieldsTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;"></div>
+            </div>
+            <div id="cloneFieldsProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneFieldsProgressBar"></div>
+                </div>
+                <div id="cloneFieldsStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneFieldsResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneFieldsResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneFields()" id="cloneFieldsBtn">Start Copying</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneFieldsModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloneValuesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Copy Values to Other Locations</h2>
+                <button class="close-modal" onclick="closeModal('cloneValuesModal')">×</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #718096; margin-bottom: 15px;">
+                    Copying <strong id="cloneValuesCount">0</strong> value(s) from <strong id="cloneValuesSource"></strong>
+                </p>
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Select destination location(s):</label>
+                <div id="cloneValuesTargets" style="max-height: 300px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px;"></div>
+            </div>
+            <div id="cloneValuesProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="margin-bottom: 10px; color: #4a5568; font-weight: 500;">Cloning in progress...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cloneValuesProgressBar"></div>
+                </div>
+                <div id="cloneValuesStatus" style="margin-top: 10px; color: #718096; font-size: 14px;"></div>
+            </div>
+            <div id="cloneValuesResults" style="display: none; margin-top: 20px; padding: 20px; background: #f7fafc; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <h3 style="color: #2d3748; margin-bottom: 15px; font-size: 18px;">Clone Results</h3>
+                <div id="cloneValuesResultsContent"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="executeCloneValues()" id="cloneValuesBtn">Start Copying</button>
+                <button class="btn btn-secondary" onclick="closeModal('cloneValuesModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

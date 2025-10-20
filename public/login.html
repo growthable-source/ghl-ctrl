@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - GHL CTRL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .rocket {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #1a202c;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: #f7fafc;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #718096;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #4a5568;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-google {
+            background: white;
+            color: #1a202c;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .divider {
+            margin: 20px 0;
+            color: #cbd5e0;
+            font-size: 12px;
+        }
+
+        .features {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .features-title {
+            color: #a0aec0;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .features-grid {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+
+        .feature {
+            font-size: 24px;
+        }
+
+        .feature-text {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+
+        .secure-text {
+            margin-top: 15px;
+            color: #cbd5e0;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="rocket">🚀</div>
+        <h1>GHL CTRL</h1>
+        <p class="subtitle">Connect to subaccounts and create, edit, organise and onboard clients with ease.</p>
+
+        <div id="message" class="message"></div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('login')">Login</button>
+            <button class="tab" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <div id="login-tab" class="tab-content active">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+            </form>
+
+            <div class="divider">OR</div>
+
+            <a href="/auth/google" class="btn btn-google">
+                <svg width="16" height="16" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                    <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+                </svg>
+                Sign in with Google
+            </a>
+        </div>
+
+        <div id="register-tab" class="tab-content">
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" name="displayName">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required minlength="8">
+                    <p class="helper-text">Minimum 8 characters</p>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" name="passwordConfirm" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="registerBtn">Create Account</button>
+            </form>
+
+            <div class="divider">OR</div>
+
+            <a href="/auth/google" class="btn btn-google">
+                <svg width="16" height="16" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                    <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+                </svg>
+                Sign up with Google
+            </a>
+        </div>
+
+        <div class="features">
+            <div class="features-title">FEATURES</div>
+            <div class="features-grid">
+                <div class="feature">
+                    <div>📝</div>
+                    <div class="feature-text">Custom Fields</div>
+                </div>
+                <div class="feature">
+                    <div>💾</div>
+                    <div class="feature-text">Custom Values</div>
+                </div>
+            </div>
+            <div class="feature">
+                <div>🔐</div>
+                <div class="feature-text">Secure Access</div>
+            </div>
+        </div>
+
+        <p class="secure-text">Secure authentication powered by Google OAuth 2.0</p>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+            document.getElementById('message').className = 'message';
+        }
+
+        function showMessage(msg, type) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + type + ' show';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            
+            const data = {
+                email: e.target.email.value,
+                password: e.target.password.value
+            };
+            
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    showMessage('Success! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = '/', 1000);
+                } else {
+                    showMessage(result.error || 'Login failed', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Sign In';
+                }
+            } catch (error) {
+                showMessage('Network error', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('registerBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            
+            const pwd = e.target.password.value;
+            const confirm = e.target.passwordConfirm.value;
+            
+            if (pwd !== confirm) {
+                showMessage('Passwords do not match', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+                return;
+            }
+            
+            const data = {
+                email: e.target.email.value,
+                password: pwd,
+                displayName: e.target.displayName.value
+            };
+            
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    showMessage('Account created! Switching to login...', 'success');
+                    e.target.reset();
+                    setTimeout(() => document.querySelector('.tab').click(), 2000);
+                } else {
+                    showMessage(result.error || 'Registration failed', 'error');
+                }
+                
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            } catch (error) {
+                showMessage('Network error', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>
