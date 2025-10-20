@@ -73,6 +73,8 @@ function assertWizardBackend() {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Trust first proxy so secure cookies work behind Render's load balancer
+app.set('trust proxy', 1);
 
 // Initialize Supabase
 const supabase = createClient(
