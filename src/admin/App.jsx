@@ -90,6 +90,94 @@ const OAUTH_TOAST_MESSAGES = {
     message: 'Marketplace install was canceled before completion.'
   }
 };
+const INTERCOM_APP_ID = 'q6toobgb';
+let intercomBooted = false;
+let intercomScriptLoading = false;
+let intercomScriptCallbacks = [];
+
+function normalizeIntercomTimestamp(value) {
+  if (!value && value !== 0) return null;
+  if (typeof value === 'number') {
+    return value > 9999999999 ? Math.floor(value / 1000) : Math.floor(value);
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return null;
+  return Math.floor(parsed / 1000);
+}
+
+function buildIntercomPayload(user) {
+  if (!user || !INTERCOM_APP_ID) return null;
+  const payload = { app_id: INTERCOM_APP_ID };
+  if (user.id) payload.user_id = user.id;
+  const profile = user.profile || {};
+  const name = profile.name || user.displayName || user.email || '';
+  if (name) payload.name = name;
+  if (user.email) payload.email = user.email;
+  const createdAt =
+    normalizeIntercomTimestamp(
+      user.createdAt || user.created_at || profile.createdAt || profile.created_at
+    ) || null;
+  if (createdAt) payload.created_at = createdAt;
+  return payload;
+}
+
+function loadIntercomScript(callback) {
+  if (!INTERCOM_APP_ID) return;
+  if (window.Intercom && typeof window.Intercom === 'function') {
+    callback?.();
+    return;
+  }
+  if (callback) {
+    intercomScriptCallbacks.push(callback);
+  }
+  if (intercomScriptLoading) {
+    return;
+  }
+  intercomScriptLoading = true;
+  const script = document.createElement('script');
+  script.src = `https://widget.intercom.io/widget/${INTERCOM_APP_ID}`;
+  script.async = true;
+  script.onload = () => {
+    intercomScriptLoading = false;
+    const queue = intercomScriptCallbacks.slice();
+    intercomScriptCallbacks = [];
+    queue.forEach((cb) => {
+      try {
+        cb();
+      } catch (error) {
+        console.error('Intercom callback failed', error);
+      }
+    });
+  };
+  script.onerror = () => {
+    intercomScriptLoading = false;
+    intercomScriptCallbacks = [];
+  };
+  document.head.appendChild(script);
+}
+
+function syncIntercom(user) {
+  if (!INTERCOM_APP_ID || !user) return;
+  const payload = buildIntercomPayload(user);
+  if (!payload) return;
+
+  const bootIntercom = () => {
+    if (!window.Intercom || typeof window.Intercom !== 'function') return;
+    if (intercomBooted) {
+      window.Intercom('update', payload);
+    } else {
+      window.Intercom('boot', payload);
+      intercomBooted = true;
+    }
+  };
+
+  if (!window.Intercom || typeof window.Intercom !== 'function') {
+    window.intercomSettings = payload;
+    loadIntercomScript(bootIntercom);
+  } else {
+    bootIntercom();
+  }
+}
 
 const CHALLENGE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 function generateDeletionChallenge() {
@@ -140,6 +228,7 @@ function BuilderShell() {
     input: '',
     submitting: false
   });
+  const [intercomUser, setIntercomUser] = useState(null);
   const initialTemplateParam = useRef(
     new URLSearchParams(window.location.search).get('templateId')
   );
@@ -171,6 +260,31 @@ function BuilderShell() {
     }
     bootstrap();
   }, [actions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch('/api/user', { credentials: 'include' });
+        const data = await response.json();
+        if (!cancelled && data?.success && data.user) {
+          setIntercomUser(data.user);
+        }
+      } catch (error) {
+        console.error('Failed to load user for Intercom', error);
+      }
+    }
+    loadCurrentUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (intercomUser) {
+      syncIntercom(intercomUser);
+    }
+  }, [intercomUser]);
 
   useEffect(() => {
     if (!initialTemplateParam.current || state.loading) return;
