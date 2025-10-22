@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GHL CTRL</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <canvas id="confettiCanvas"></canvas>
@@ -13,9 +14,22 @@
         <header>
             <div class="header-left">
                 <h1>🚀 GHL CTRL</h1>
+                <nav class="main-nav" aria-label="Main navigation">
+                    <a href="/" class="nav-btn">
+                        <span class="nav-btn-icon" aria-hidden="true">🏠</span>
+                        <span class="nav-btn-label">Home</span>
+                    </a>
+                </nav>
             </div>
-            <div class="user-info" id="userInfo"></div>
+            <div class="header-right">
+                <a data-canny-link href="https://ghlctrl.canny.io/feature-requests" class="btn btn-secondary feedback-link">
+                    Give feedback
+                </a>
+                <div class="user-info" id="userInfo"></div>
+            </div>
         </header>
+
+        <nav class="breadcrumb" id="breadcrumb" aria-label="Breadcrumb"></nav>
 
 <div class="location-selector">
     <select id="locationDropdown" class="location-dropdown">
@@ -48,13 +62,13 @@
 
             <div id="location-content" style="display: none;">
                 <div class="tabs">
-                    <button class="tab active" onclick="switchTab('fields')">Custom Fields</button>
-                    <button class="tab" onclick="switchTab('values')">Custom Values</button>
-                    <button class="tab" onclick="switchTab('tags')">Tags</button>
-                    <button class="tab" onclick="switchTab('triggerLinks')">Trigger Links</button>
-                    <button class="tab" onclick="switchTab('media')">Media Library</button>
-                    <button class="tab" onclick="switchTab('social')">Social Profiles</button>
-                     <button class="tab" onclick="switchTab('settings')">Location Settings</button>
+                    <button class="tab active" data-tab="fields" onclick="switchTab(event, 'fields')">Custom Fields</button>
+                    <button class="tab" data-tab="values" onclick="switchTab(event, 'values')">Custom Values</button>
+                    <button class="tab" data-tab="tags" onclick="switchTab(event, 'tags')">Tags</button>
+                    <button class="tab" data-tab="triggerLinks" onclick="switchTab(event, 'triggerLinks')">Trigger Links</button>
+                    <button class="tab" data-tab="media" onclick="switchTab(event, 'media')">Media Library</button>
+                    <button class="tab" data-tab="social" onclick="switchTab(event, 'social')">Social Profiles</button>
+                    <button class="tab" data-tab="settings" onclick="switchTab(event, 'settings')">Location Settings</button>
 </div>
 
                 <div id="fields-section" class="content-section active">
@@ -468,6 +482,75 @@
     </div>
 
     <!-- Modals -->
+    <div id="profileModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <div class="modal-content profile-modal-content">
+            <div class="modal-header">
+                <h2 id="profileModalTitle">Your Profile</h2>
+                <button type="button" class="close-modal" aria-label="Close profile settings" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+            <form id="profileForm" class="profile-form" novalidate>
+                <div class="profile-avatar-section">
+                    <div class="profile-avatar-preview" id="profileAvatarPreview" aria-live="polite"></div>
+                    <div class="profile-avatar-actions">
+                        <label class="avatar-upload-input">
+                            <input type="file" id="profileAvatarInput" accept="image/*">
+                            <span>Upload image</span>
+                        </label>
+                        <button type="button" class="avatar-remove-btn" id="profileAvatarRemoveBtn">Remove photo</button>
+                    </div>
+                    <p class="avatar-hint">Use a square PNG or JPG under 2&nbsp;MB for best results.</p>
+                </div>
+                <div class="form-group">
+                    <label for="profileName">Display Name</label>
+                    <input type="text" id="profileName" name="profileName" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="profileTitle">Role / Title</label>
+                    <input type="text" id="profileTitle" name="profileTitle" placeholder="e.g. Account Manager">
+                </div>
+                <div class="form-group">
+                    <label for="profileBio">Bio</label>
+                    <textarea id="profileBio" name="profileBio" rows="3" placeholder="Tell us a little about yourself"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('profileModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save profile</button>
+                </div>
+            </form>
+            <div class="profile-referral-card" id="profileReferralCard" data-state="loading" aria-live="polite">
+                <div class="referral-header">
+                    <h3>Referral Rewards</h3>
+                    <div class="referral-header-meta">
+                        <span class="referral-level-badge" id="referralLevelBadge" hidden></span>
+                        <span class="referral-status-badge" id="referralStatusBadge">Loading…</span>
+                    </div>
+                </div>
+                <p class="referral-description">Share your personal link to unlock complimentary plans.</p>
+                <div class="referral-link-box">
+                    <span class="referral-link-value" id="referralLinkValue" data-placeholder="Generating link…">Generating link…</span>
+                    <button type="button" class="btn btn-secondary referral-copy-btn" id="referralCopyBtn" disabled>Copy link</button>
+                </div>
+                <div class="referral-counts">
+                    <div class="referral-count">
+                        <strong id="referralPaidCount">0</strong>
+                        <span>Paid referrals</span>
+                    </div>
+                    <div class="referral-count">
+                        <strong id="referralPendingCount">0</strong>
+                        <span>Pending</span>
+                    </div>
+                    <div class="referral-count">
+                        <strong id="referralTotalCount">0</strong>
+                        <span>Total invites</span>
+                    </div>
+                </div>
+                <ul class="referral-milestones" id="referralMilestones"></ul>
+                <p class="referral-next" id="referralNextStep"></p>
+                <p class="referral-share-hint" id="referralShareHint">Each paid referral automatically unlocks the next tier.</p>
+            </div>
+        </div>
+    </div>
+
     <div id="connectCrmModal" class="modal">
         <div class="modal-content connect-crm-modal">
             <div class="modal-header">

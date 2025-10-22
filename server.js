@@ -90,6 +90,19 @@ const PRICING_PLANS = {
   scale: { max_locations: 250, price: 59.99, priceId: process.env.STRIPE_SCALE_PRICE_ID },
   enterprise: { max_locations: 999, price: 99.00, priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID }
 };
+const PLAN_ORDER = ['free', 'starter', 'growth', 'scale', 'enterprise'];
+const PLAN_DISPLAY_NAMES = {
+  free: 'Free Plan',
+  starter: 'Starter Plan',
+  growth: 'Growth Plan',
+  scale: 'Scale Plan',
+  enterprise: 'Enterprise Plan'
+};
+const REFERRAL_MILESTONES = [
+  { count: 1, plan: 'starter', levelKey: 'insider', levelName: 'Insider', icon: '🌟' },
+  { count: 3, plan: 'growth', levelKey: 'ambassador', levelName: 'Ambassador', icon: '🚀' },
+  { count: 5, plan: 'scale', levelKey: 'legend', levelName: 'Legend', icon: '👑' }
+];
 
 // Create uploads directory
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
@@ -125,6 +138,327 @@ const upload = multer({
 
 // In-memory storage for locations (in production, use a database)
 const userLocations = {};
+
+function generateReferralCode(length = 8) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i += 1) {
+    const index = crypto.randomInt(0, alphabet.length);
+    code += alphabet[index];
+  }
+  return code;
+}
+
+function buildEphemeralReferralRecord(userId) {
+  const base = typeof userId === 'string' && userId.length > 0 ? userId : JSON.stringify(userId || '');
+  let hashed;
+  try {
+    hashed = crypto.createHash('sha1').update(base).digest('hex').slice(0, 10).toUpperCase();
+  } catch (error) {
+    hashed = generateReferralCode(10);
+  }
+  return {
+    user_id: userId,
+    referral_code: hashed,
+    created_at: new Date().toISOString(),
+    ephemeral: true
+  };
+}
+
+function calculateUnlockedPlan(paidReferrals = 0) {
+  for (let i = REFERRAL_MILESTONES.length - 1; i >= 0; i -= 1) {
+    if (paidReferrals >= REFERRAL_MILESTONES[i].count) {
+      return REFERRAL_MILESTONES[i].plan;
+    }
+  }
+  return null;
+}
+
+function mapReferralMilestones(paidReferrals = 0) {
+  return REFERRAL_MILESTONES.map((milestone) => {
+    const unlocked = paidReferrals >= milestone.count;
+    return {
+      count: milestone.count,
+      plan: milestone.plan,
+      label: PLAN_DISPLAY_NAMES[milestone.plan] || milestone.plan,
+      unlocked,
+      remaining: unlocked ? 0 : milestone.count - paidReferrals,
+      levelKey: milestone.levelKey,
+      levelName: milestone.levelName,
+      icon: milestone.icon,
+      levelIndex: REFERRAL_MILESTONES.indexOf(milestone) + 1
+    };
+  });
+}
+
+function getCurrentReferralLevel(paidReferrals = 0) {
+  let currentLevel = null;
+  for (let i = 0; i < REFERRAL_MILESTONES.length; i += 1) {
+    const milestone = REFERRAL_MILESTONES[i];
+    if (paidReferrals >= milestone.count) {
+      currentLevel = {
+        levelKey: milestone.levelKey,
+        levelName: milestone.levelName,
+        icon: milestone.icon,
+        count: milestone.count,
+        levelIndex: i + 1
+      };
+    } else {
+      break;
+    }
+  }
+  return currentLevel;
+}
+
+function getNextReferralLevel(paidReferrals = 0) {
+  for (let i = 0; i < REFERRAL_MILESTONES.length; i += 1) {
+    const milestone = REFERRAL_MILESTONES[i];
+    if (paidReferrals < milestone.count) {
+      return {
+        levelKey: milestone.levelKey,
+        levelName: milestone.levelName,
+        icon: milestone.icon,
+        count: milestone.count,
+        remaining: milestone.count - paidReferrals,
+        levelIndex: i + 1
+      };
+    }
+  }
+  return null;
+}
+
+function isPaidReferralStatus(status) {
+  if (!status) return false;
+  const normalized = String(status).toLowerCase();
+  return ['paid', 'active', 'converted', 'completed', 'qualified'].includes(normalized);
+}
+
+async function ensureReferralRecord(userId) {
+  if (!userId) {
+    throw new Error('Missing user id for referral record');
+  }
+
+  const { data, error } = await supabase
+    .from('user_referrals')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (!error && data) {
+    return { ...data, ephemeral: Boolean(data.ephemeral) };
+  }
+
+  if (error) {
+    if (error.code === '42P01') {
+      console.warn('user_referrals table missing; returning fallback referral code');
+      return buildEphemeralReferralRecord(userId);
+    }
+    if (error.code && error.code !== 'PGRST116') {
+      console.warn('Unable to read user_referrals; falling back to ephemeral code', error);
+      return buildEphemeralReferralRecord(userId);
+    }
+  }
+
+  let attempt = 0;
+  while (attempt < 5) {
+    attempt += 1;
+    const referralCode = generateReferralCode();
+    const { data: inserted, error: insertError } = await supabase
+      .from('user_referrals')
+      .insert({
+        user_id: userId,
+        referral_code: referralCode,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (!insertError && inserted) {
+      return { ...inserted, ephemeral: false };
+    }
+
+    if (insertError) {
+      if (insertError.code === '42P01') {
+        console.warn('user_referrals table missing on insert; using fallback referral code');
+        return buildEphemeralReferralRecord(userId);
+      }
+      if (insertError.code !== '23505') {
+        console.warn('Unable to insert into user_referrals; using fallback code', insertError);
+        return buildEphemeralReferralRecord(userId);
+      }
+    }
+  }
+
+  return buildEphemeralReferralRecord(userId);
+}
+
+async function fetchOrCreateSubscription(userId) {
+  let subscription = null;
+  let tableMissing = false;
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === '42P01') {
+      tableMissing = true;
+      console.warn('subscriptions table missing; using fallback free plan');
+    } else if (error.code === 'PGRST116') {
+      // no rows, handled below
+    } else {
+      console.warn('Unable to fetch subscription; falling back to free plan', error);
+      return {
+        user_id: userId,
+        plan_type: 'free',
+        status: 'active',
+        max_locations: PRICING_PLANS.free.max_locations,
+        fallback: true
+      };
+    }
+  }
+
+  if (tableMissing) {
+    return {
+      user_id: userId,
+      plan_type: 'free',
+      status: 'active',
+      max_locations: PRICING_PLANS.free.max_locations,
+      tableMissing: true,
+      fallback: true
+    };
+  }
+
+  if (data) {
+    subscription = data;
+  } else {
+    const { data: newSubscription, error: insertError } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        plan_type: 'free',
+        status: 'active',
+        max_locations: PRICING_PLANS.free.max_locations,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '42P01') {
+        console.warn('subscriptions table missing on insert; using fallback free plan');
+        return {
+          user_id: userId,
+          plan_type: 'free',
+          status: 'active',
+          max_locations: PRICING_PLANS.free.max_locations,
+          tableMissing: true,
+          fallback: true
+        };
+      }
+      console.warn('Unable to create subscription; using fallback free plan', insertError);
+      return {
+        user_id: userId,
+        plan_type: 'free',
+        status: 'active',
+        max_locations: PRICING_PLANS.free.max_locations,
+        fallback: true
+      };
+    }
+
+    subscription = newSubscription;
+  }
+
+  return subscription;
+}
+
+async function getReferralStats(userId) {
+  const stats = {
+    totalReferrals: 0,
+    paidReferrals: 0,
+    pendingReferrals: 0
+  };
+
+  const { data, error } = await supabase
+    .from('referral_signups')
+    .select('status')
+    .eq('referrer_id', userId);
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return stats;
+    }
+    if (error.code === '42P01') {
+      console.warn('Referral signups table is missing. Skipping referral stats fetch.');
+      return stats;
+    }
+    console.warn('Unable to load referral stats; returning defaults', error);
+    return stats;
+  }
+
+  const referrals = data || [];
+  stats.totalReferrals = referrals.length;
+  stats.paidReferrals = referrals.filter((row) => isPaidReferralStatus(row.status)).length;
+  stats.pendingReferrals = Math.max(0, stats.totalReferrals - stats.paidReferrals);
+
+  return stats;
+}
+
+async function applyReferralUpgrade(userId, paidReferrals, existingSubscription) {
+  const subscription = existingSubscription || (await fetchOrCreateSubscription(userId));
+  if (subscription?.tableMissing || subscription?.fallback) {
+    return {
+      unlockedPlan: null,
+      planUpdated: false,
+      subscription
+    };
+  }
+  const unlockedPlan = calculateUnlockedPlan(paidReferrals);
+  const currentPlan = subscription?.plan_type || 'free';
+  let planUpdated = false;
+
+  if (unlockedPlan && PLAN_ORDER.indexOf(unlockedPlan) > PLAN_ORDER.indexOf(currentPlan)) {
+    const { error: upgradeError } = await supabase
+      .from('subscriptions')
+      .update({
+        plan_type: unlockedPlan,
+        status: 'active',
+        max_locations: PRICING_PLANS[unlockedPlan].max_locations,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    if (upgradeError) {
+      console.warn('Failed to apply referral upgrade; continuing without error', upgradeError);
+    } else {
+      planUpdated = true;
+      subscription.plan_type = unlockedPlan;
+      subscription.status = 'active';
+      subscription.max_locations = PRICING_PLANS[unlockedPlan].max_locations;
+    }
+  }
+
+  return {
+    unlockedPlan,
+    planUpdated,
+    subscription
+  };
+}
+
+function buildReferralLink(req, code) {
+  const fallback = `${req.protocol}://${req.get('host') || 'localhost:3000'}`;
+  let baseUrl = process.env.REFERRAL_BASE_URL || process.env.APP_URL || fallback;
+
+  if (!/^https?:\/\//i.test(baseUrl)) {
+    baseUrl = `https://${baseUrl}`;
+  }
+
+  const url = new URL(baseUrl);
+  url.searchParams.set('ref', code);
+  return url.toString();
+}
 
 function resolveBaseUrl(req) {
   if (process.env.APP_URL) {
@@ -1600,6 +1934,61 @@ app.get('/api/subscription', ensureAuthenticated, async (req, res) => {
   }
 });
 
+app.get('/api/referrals', ensureAuthenticated, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const referralRecord = await ensureReferralRecord(userId);
+    const [subscription, stats] = await Promise.all([
+      fetchOrCreateSubscription(userId),
+      getReferralStats(userId)
+    ]);
+    const rewardResult = await applyReferralUpgrade(userId, stats.paidReferrals, subscription);
+    const milestones = mapReferralMilestones(stats.paidReferrals);
+    const nextMilestone = milestones.find((item) => !item.unlocked) || null;
+    const currentLevel = getCurrentReferralLevel(stats.paidReferrals);
+    const nextLevel = getNextReferralLevel(stats.paidReferrals);
+    const referralsDisabled = Boolean(referralRecord?.ephemeral);
+    const shareMessage = referralsDisabled
+      ? 'Referral rewards are almost ready. We will activate tracking for your account shortly.'
+      : 'Invite a fellow agency owner to unlock complimentary upgrades.';
+    const rewardHeadline = referralsDisabled
+      ? 'Referral rewards launching soon.'
+      : rewardResult.unlockedPlan
+        ? `You have unlocked the ${PLAN_DISPLAY_NAMES[rewardResult.unlockedPlan]}.`
+        : 'Unlock complimentary upgrades with paid referrals.';
+
+    res.json({
+      success: true,
+      referral: {
+        code: referralRecord.referral_code,
+        link: buildReferralLink(req, referralRecord.referral_code),
+        totalReferrals: stats.totalReferrals,
+        paidReferrals: stats.paidReferrals,
+        pendingReferrals: stats.pendingReferrals,
+        milestones,
+        unlockedPlan: rewardResult.unlockedPlan,
+        subscriptionPlan: rewardResult.subscription?.plan_type || 'free',
+        planUpdated: rewardResult.planUpdated,
+        nextMilestone,
+        shareMessage,
+        rewardHeadline,
+        remainingToNext: nextMilestone ? nextMilestone.remaining : 0,
+        disabled: referralsDisabled,
+        programStatus: referralsDisabled ? 'prelaunch' : 'active',
+        currentLevel,
+        nextLevel
+      }
+    });
+  } catch (error) {
+    console.error('Failed to load referral info:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load referral information'
+    });
+  }
+});
+
 // Create Stripe checkout session
 app.post('/api/create-checkout-session', ensureAuthenticated, async (req, res) => {
   const userId = req.user.id;
@@ -1964,14 +2353,24 @@ app.delete('/api/locations/:id', ensureAuthenticated, async (req, res) => {
     });
   }
   
-  userLocations[userId].splice(locationIndex, 1);
+  const [removedLocation] = userLocations[userId].splice(locationIndex, 1);
   
   try {
-    await supabase
-      .from('saved_locations')
-      .delete()
-      .eq('id', locationId)
-      .eq('user_id', userId);
+    const supabaseClient = supabaseAdmin || supabase;
+    if (supabaseClient) {
+      await supabaseClient
+        .from('saved_locations')
+        .delete()
+        .eq('id', locationId)
+        .eq('user_id', userId);
+      if (removedLocation?.locationId) {
+        await supabaseClient
+          .from('saved_locations')
+          .delete()
+          .eq('location_id', removedLocation.locationId)
+          .eq('user_id', userId);
+      }
+    }
   } catch (dbError) {
     console.error('Failed to delete from database:', dbError);
   }
@@ -4632,6 +5031,42 @@ app.put(
   })
 );
 
+app.delete(
+  '/api/onboarding/templates/:id',
+  ensureAuthenticated,
+  requireWizardEnabled(async (req, res) => {
+    const templateId = req.params.id;
+    if (!templateId) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'templateId required' });
+    }
+
+    try {
+      const ownerId = getWizardOwnerId(req.user.id);
+      const { data, error } = await supabaseAdmin
+        .from('onboarding_templates')
+        .delete()
+        .eq('id', templateId)
+        .eq('created_by', ownerId)
+        .select('id, name')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        return res
+          .status(404)
+          .json({ success: false, error: 'Template not found' });
+      }
+      res.json({ success: true, templateId: data.id });
+    } catch (error) {
+      console.error('template delete error', error);
+      res
+        .status(400)
+        .json({ success: false, error: 'Failed to delete template' });
+    }
+  })
+);
+
 app.get(
   '/api/onboarding/templates',
   ensureAuthenticated,
@@ -4743,6 +5178,118 @@ app.post(
     } catch (error) {
       console.error('publish template error', error);
       res.status(400).json({ success: false, error: 'Publish failed' });
+    }
+  })
+);
+
+app.post(
+  '/api/onboarding/templates/:id/clone',
+  ensureAuthenticated,
+  requireWizardEnabled(async (req, res) => {
+    const templateId = req.params.id;
+    if (!templateId) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'templateId required' });
+    }
+
+    try {
+      const ownerId = getWizardOwnerId(req.user.id);
+      const { data: existing, error: existingError } = await supabaseAdmin
+        .from('onboarding_templates')
+        .select('*')
+        .eq('id', templateId)
+        .eq('created_by', ownerId)
+        .single();
+      if (existingError || !existing) {
+        return res
+          .status(404)
+          .json({ success: false, error: 'Template not found' });
+      }
+
+      const requestedName = coerceString(req.body?.name || '');
+      const baseName = coerceString(existing.name || 'Untitled Wizard');
+      const defaultCloneName =
+        baseName.length > 120
+          ? `${baseName.slice(0, 120)} Copy`
+          : `${baseName} Copy`;
+      const cloneName = (requestedName || defaultCloneName).slice(0, 140);
+      const timestamp = new Date().toISOString();
+
+      const mapped = mapTemplateRow(existing);
+      const metadata = {
+        ...(mapped.metadata || {}),
+        createdAt: timestamp,
+        updatedAt: null,
+        clonedFrom: existing.id,
+        clonedAt: timestamp
+      };
+
+      const sanitized = sanitizeTemplateInput(
+        {
+          ...mapped,
+          id: null,
+          name: cloneName,
+          status: 'draft',
+          metadata
+        },
+        { ownerId }
+      );
+
+      const locationIdValue = sanitized.locationId
+        ? sanitized.locationId.trim()
+        : '';
+      let locationColumn = null;
+      if (locationIdValue && isUuid(locationIdValue)) {
+        locationColumn = locationIdValue;
+      }
+
+      const definitionWithMeta = {
+        ...sanitized.definition,
+        metadata: {
+          ...(sanitized.definition.metadata || {}),
+          locationId: locationIdValue,
+          clonedFrom: existing.id,
+          clonedAt: timestamp
+        }
+      };
+
+      const insertPayload = {
+        name: sanitized.name,
+        description: sanitized.description,
+        status: 'draft',
+        location_id: locationColumn,
+        theme: sanitized.theme,
+        definition: definitionWithMeta,
+        steps: definitionWithMeta,
+        created_by: ownerId
+      };
+
+      let { data, error } = await supabaseAdmin
+        .from('onboarding_templates')
+        .insert(insertPayload)
+        .select('*')
+        .single();
+      if (error) {
+        const fallbackPayload = {
+          name: sanitized.name,
+          steps: definitionWithMeta,
+          created_by: ownerId
+        };
+        ({ data, error } = await supabaseAdmin
+          .from('onboarding_templates')
+          .insert(fallbackPayload)
+          .select('*')
+          .single());
+        if (error) throw error;
+      }
+
+      res.json({ success: true, template: mapTemplateRow(data) });
+    } catch (error) {
+      console.error('template clone error', error);
+      res
+        .status(400)
+        .json({ success: false, error: 'Failed to clone template' });
     }
   })
 );

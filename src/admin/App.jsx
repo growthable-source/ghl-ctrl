@@ -14,6 +14,8 @@ import {
   fetchTemplate,
   saveTemplate,
   publishTemplate,
+  cloneTemplate,
+  deleteTemplate,
   issueWizardLink,
   fetchLibrary,
   fetchTemplates,
@@ -89,6 +91,16 @@ const OAUTH_TOAST_MESSAGES = {
   }
 };
 
+const CHALLENGE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+function generateDeletionChallenge() {
+  let word = '';
+  for (let i = 0; i < 4; i += 1) {
+    const index = Math.floor(Math.random() * CHALLENGE_ALPHABET.length);
+    word += CHALLENGE_ALPHABET[index];
+  }
+  return word;
+}
+
 function App() {
   return (
     <BuilderProvider>
@@ -121,6 +133,13 @@ function BuilderShell() {
     locationId: ''
   });
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    template: null,
+    challenge: '',
+    input: '',
+    submitting: false
+  });
   const initialTemplateParam = useRef(
     new URLSearchParams(window.location.search).get('templateId')
   );
@@ -241,6 +260,103 @@ function BuilderShell() {
       setTemplatesLoading(false);
     }
   }, [actions]);
+
+  const handleCloneTemplate = useCallback(
+    async (template) => {
+      if (!template?.id) return;
+      try {
+        const response = await cloneTemplate(template.id);
+        const cloned = response?.template || response;
+        await loadTemplates();
+        setToast({
+          type: 'success',
+          message:
+            cloned?.name && cloned.name !== template.name
+              ? `Cloned "${template.name}" as "${cloned.name}".`
+              : `Cloned "${template.name}".`
+        });
+      } catch (error) {
+        console.error(error);
+        setToast({
+          type: 'error',
+          message: error.message || 'Failed to clone wizard'
+        });
+      }
+    },
+    [loadTemplates]
+  );
+
+  const openDeleteWizardModal = useCallback((template) => {
+    if (!template) return;
+    setDeleteModal({
+      open: true,
+      template,
+      challenge: generateDeletionChallenge(),
+      input: '',
+      submitting: false
+    });
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setDeleteModal({
+      open: false,
+      template: null,
+      challenge: '',
+      input: '',
+      submitting: false
+    });
+  }, []);
+
+  const handleDeleteInputChange = useCallback((value) => {
+    setDeleteModal((prev) => ({ ...prev, input: value }));
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteModal.template?.id) return;
+    const inputCode = deleteModal.input.trim().toUpperCase();
+    if (inputCode !== deleteModal.challenge) return;
+
+    setDeleteModal((prev) => ({ ...prev, submitting: true }));
+
+    try {
+      await deleteTemplate(deleteModal.template.id);
+      const deletedId = deleteModal.template.id;
+      const deletedName = deleteModal.template.name;
+      setToast({
+        type: 'success',
+        message: `Deleted "${deletedName}".`
+      });
+      setDeleteModal({
+        open: false,
+        template: null,
+        challenge: '',
+        input: '',
+        submitting: false
+      });
+      if (deletedId === state.wizard.id) {
+        actions.setWizard(createWizard());
+        actions.setDirty(false);
+        setActiveTemplateId(null);
+        setView('dashboard');
+        window.history.replaceState({}, '', '/admin/onboarding.html');
+      }
+      await loadTemplates();
+    } catch (error) {
+      console.error(error);
+      setToast({
+        type: 'error',
+        message: error.message || 'Failed to delete wizard'
+      });
+      setDeleteModal((prev) => ({ ...prev, submitting: false }));
+    }
+  }, [
+    actions,
+    deleteModal,
+    loadTemplates,
+    setActiveTemplateId,
+    setView,
+    state.wizard.id
+  ]);
 
   const openBuilderById = useCallback(
     async (templateId) => {
@@ -535,6 +651,8 @@ function BuilderShell() {
                   setToast({ type: 'error', message: 'Unable to copy link' })
                 );
             }}
+            onClone={handleCloneTemplate}
+            onDelete={openDeleteWizardModal}
           />
 
           <CreateWizardModal
@@ -547,6 +665,13 @@ function BuilderShell() {
             locations={state.bootstrap.locations || []}
             onSubmit={handleCreateWizard}
             submitting={creatingTemplate}
+          />
+
+          <DeleteWizardModal
+            modal={deleteModal}
+            onClose={closeDeleteModal}
+            onChange={handleDeleteInputChange}
+            onConfirm={handleConfirmDelete}
           />
         </>
       ) : null}
@@ -596,7 +721,17 @@ function MainNavigation({ currentView, onNavigate, onConnect }) {
   );
 }
 
-function Dashboard({ templates, locations, loading, onCreate, onEdit, onCopyLink, onRefresh }) {
+function Dashboard({
+  templates,
+  locations,
+  loading,
+  onCreate,
+  onEdit,
+  onCopyLink,
+  onRefresh,
+  onClone,
+  onDelete
+}) {
   return (
     <div className="wizard-dashboard">
       <div className="dashboard-header">
@@ -643,6 +778,8 @@ function Dashboard({ templates, locations, loading, onCreate, onEdit, onCopyLink
                 locations={locations}
                 onEdit={onEdit}
                 onCopyLink={onCopyLink}
+                onClone={onClone}
+                onDelete={onDelete}
               />
             ))}
           </div>
@@ -1400,7 +1537,7 @@ function ConfettiBurst({ count = 28 }) {
   );
 }
 
-function WizardRow({ template, locations, onEdit, onCopyLink }) {
+function WizardRow({ template, locations, onEdit, onCopyLink, onClone, onDelete }) {
   const stats = template.stats || {};
   const updated = template.metadata?.updatedAt || template.updatedAt;
   const locationName =
@@ -1442,6 +1579,12 @@ function WizardRow({ template, locations, onEdit, onCopyLink }) {
         </button>
         <button
           className="secondary"
+          onClick={() => onClone?.(template)}
+        >
+          Clone Wizard
+        </button>
+        <button
+          className="secondary"
           onClick={() => onCopyLink(publicUrl)}
           disabled={!publicUrl}
         >
@@ -1457,6 +1600,12 @@ function WizardRow({ template, locations, onEdit, onCopyLink }) {
             Open Link
           </a>
         ) : null}
+        <button
+          className="danger"
+          onClick={() => onDelete?.(template)}
+        >
+          Delete Wizard
+        </button>
       </div>
     </div>
   );
@@ -1522,6 +1671,63 @@ function CreateWizardModal({ open, onClose, form, setForm, locations, onSubmit, 
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteWizardModal({ modal, onClose, onChange, onConfirm }) {
+  const { open, template, challenge, input, submitting } = modal || {};
+  if (!open || !template) return null;
+
+  const confirmationCode = (challenge || '').toUpperCase();
+  const normalizedInput = (input || '').trim().toUpperCase();
+  const disableDelete = submitting || normalizedInput !== confirmationCode;
+
+  return (
+    <div className={`modal ${open ? 'show' : ''}`}>
+      <div className="modal-content delete-modal">
+        <div className="modal-header">
+          <h2>Delete Wizard</h2>
+          <button className="close-modal" onClick={onClose} disabled={submitting}>
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          <p>
+            Deleting <strong>{template.name}</strong> removes the wizard configuration and cannot
+            be undone.
+          </p>
+          <p>
+            Type{' '}
+            <span className="challenge-code" aria-label="Confirmation code">
+              {confirmationCode}
+            </span>{' '}
+            to confirm this action.
+          </p>
+          <input
+            type="text"
+            value={input}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="Enter confirmation code"
+            spellCheck={false}
+            autoComplete="off"
+            disabled={submitting}
+          />
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="danger"
+            onClick={onConfirm}
+            disabled={disableDelete}
+          >
+            {submitting ? 'Deleting…' : 'Delete wizard'}
+          </button>
+        </div>
       </div>
     </div>
   );

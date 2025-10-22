@@ -39,6 +39,24 @@ const OAUTH_STATUS_MESSAGES = {
         text: 'Marketplace install was canceled before completion. No changes were made.'
     }
 };
+const PLAN_DISPLAY_NAMES = {
+    free: 'Free Plan',
+    starter: 'Starter Plan',
+    growth: 'Growth Plan',
+    scale: 'Scale Plan',
+    enterprise: 'Enterprise Plan'
+};
+const TAB_LABELS = {
+    fields: 'Custom Fields',
+    values: 'Custom Values',
+    tags: 'Tags',
+    triggerLinks: 'Trigger Links',
+    media: 'Media Library',
+    social: 'Social Profiles',
+    settings: 'Location Settings'
+};
+const PROFILE_STORAGE_PREFIX = 'ghlctrl.profile.';
+const REFERRAL_REFRESH_INTERVAL = 1000 * 60 * 3;
 let currentUser = null;
 let currentLocations = [];
 let selectedLocation = null;
@@ -55,6 +73,14 @@ let allTags = [];
 let selectedTags = new Set();
 let filteredTags = [];
 let currentSocialProfiles = { google: [] };
+let referralState = {
+    loading: false,
+    loaded: false,
+    lastFetched: 0,
+    data: null,
+    error: null
+};
+let referralCopyResetTimer = null;
 
 function escapeHtml(text) {
     if (text === undefined || text === null) return '';
@@ -76,10 +102,63 @@ function escapeHtml(text) {
     });
 }
 
+function getInitials(value) {
+    if (!value) return 'U';
+    const parts = value
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    if (parts.length === 0) return 'U';
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getProfileStorageKey(user) {
+    const identifier = user?.id || user?._id || user?.email || 'default';
+    return `${PROFILE_STORAGE_PREFIX}${identifier}`;
+}
+
+function loadProfileFromStorage(user) {
+    try {
+        const raw = localStorage.getItem(getProfileStorageKey(user));
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (error) {
+        console.warn('Unable to load saved profile', error);
+        return null;
+    }
+}
+
+function saveProfileToStorage(user, profile) {
+    try {
+        localStorage.setItem(getProfileStorageKey(user), JSON.stringify(profile));
+    } catch (error) {
+        console.warn('Unable to persist profile', error);
+    }
+}
+
+function hydrateCurrentUserProfile() {
+    if (!currentUser) return;
+    const storedProfile = loadProfileFromStorage(currentUser);
+    currentUser.profile = { ...(currentUser.profile || {}) };
+    if (storedProfile) {
+        currentUser.profile = { ...currentUser.profile, ...storedProfile };
+    }
+    if (currentUser.profile.name) {
+        currentUser.displayName = currentUser.profile.name;
+    }
+    if (currentUser.profile.avatar) {
+        currentUser.photo = currentUser.profile.avatar;
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
     setupFilterListeners();
+    updateBreadcrumb();
 });
 
 async function checkAuthentication() {
@@ -93,7 +172,9 @@ async function checkAuthentication() {
         }
         
         currentUser = data.user;
+        hydrateCurrentUserProfile();
         displayUserInfo();
+        setupProfileModal();
         loadLocations();
         setupFormHandlers();
         setupInputListeners();
@@ -149,11 +230,528 @@ async function checkAuthentication() {
 
 function displayUserInfo() {
     const userInfoEl = document.getElementById('userInfo');
+    if (!userInfoEl || !currentUser) return;
+
+    const profile = currentUser.profile || {};
+    const rawName = (profile.name || currentUser.displayName || currentUser.email || 'User').trim();
+    const displayName = escapeHtml(rawName);
+    const title = profile.title ? escapeHtml(profile.title) : '';
+    const avatarSource = profile.avatar || currentUser.photo || '';
+    const initials = escapeHtml(getInitials(rawName || currentUser.email || 'User'));
+    const altText = escapeHtml((rawName || 'User') + '\'s avatar');
+    
+    const avatarMarkup = avatarSource
+        ? `<img src="${escapeHtml(avatarSource)}" alt="${altText}" id="userAvatarImage">`
+        : `<span class="user-avatar-initials">${initials}</span>`;
+
     userInfoEl.innerHTML = `
-        <span style="color: #555; font-size: 14px;">${currentUser.displayName || currentUser.email}</span>
-        <img src="${currentUser.photo || ''}" alt="Profile">
+        <button type="button" class="user-profile" id="userProfileTrigger" aria-haspopup="dialog" aria-controls="profileModal">
+            <div class="user-avatar">${avatarMarkup}</div>
+            <div class="user-details">
+                <span class="user-name">${displayName}</span>
+                ${title ? `<span class="user-title">${title}</span>` : ''}
+            </div>
+        </button>
         <a href="/auth/logout" class="logout-btn">Logout</a>
     `;
+
+    const trigger = document.getElementById('userProfileTrigger');
+    if (trigger) {
+        trigger.addEventListener('click', () => openProfileModal());
+    }
+
+    const avatarImg = document.getElementById('userAvatarImage');
+    if (avatarImg) {
+        avatarImg.addEventListener('error', () => {
+            const avatarContainer = userInfoEl.querySelector('.user-avatar');
+            if (!avatarContainer) return;
+            avatarContainer.innerHTML = `<span class="user-avatar-initials">${initials}</span>`;
+        }, { once: true });
+    }
+}
+
+function openProfileModal() {
+    populateProfileForm();
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    modal.classList.add('show');
+    const nameInput = document.getElementById('profileName');
+    if (nameInput) {
+        setTimeout(() => nameInput.focus(), 60);
+    }
+
+    if (referralState.loaded && referralState.data) {
+        updateReferralUI(referralState.data);
+    } else {
+        setReferralLoadingState('loading');
+    }
+    loadReferralCard();
+}
+
+function setupProfileModal() {
+    const form = document.getElementById('profileForm');
+    const modal = document.getElementById('profileModal');
+    if (!form || !modal) return;
+
+    if (!form.dataset.bound) {
+        form.addEventListener('submit', handleProfileFormSubmit);
+        form.dataset.bound = 'true';
+    }
+
+    const avatarInput = document.getElementById('profileAvatarInput');
+    if (avatarInput && !avatarInput.dataset.bound) {
+        avatarInput.addEventListener('change', handleProfileAvatarChange);
+        avatarInput.dataset.bound = 'true';
+    }
+
+    const removeBtn = document.getElementById('profileAvatarRemoveBtn');
+    if (removeBtn && !removeBtn.dataset.bound) {
+        removeBtn.addEventListener('click', handleProfileAvatarRemove);
+        removeBtn.dataset.bound = 'true';
+    }
+
+    const copyBtn = document.getElementById('referralCopyBtn');
+    if (copyBtn && !copyBtn.dataset.bound) {
+        copyBtn.addEventListener('click', handleReferralCopyClick);
+        copyBtn.dataset.bound = 'true';
+    }
+
+    if (!modal.dataset.bound) {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal('profileModal');
+            }
+        });
+        modal.dataset.bound = 'true';
+    }
+
+    populateProfileForm();
+}
+
+function populateProfileForm() {
+    const form = document.getElementById('profileForm');
+    if (!form || !currentUser) return;
+
+    const profile = currentUser.profile || {};
+    const nameInput = document.getElementById('profileName');
+    const titleInput = document.getElementById('profileTitle');
+    const bioInput = document.getElementById('profileBio');
+
+    const nameValue = profile.name || currentUser.displayName || '';
+    if (nameInput) nameInput.value = nameValue || '';
+    if (titleInput) titleInput.value = profile.title || '';
+    if (bioInput) bioInput.value = profile.bio || '';
+
+    const avatarData = profile.avatar || currentUser.photo || '';
+    form.dataset.avatarDataUrl = avatarData || '';
+    form.dataset.avatarRemoved = 'false';
+
+    updateProfileAvatarPreview(avatarData, nameValue || currentUser.email || 'User');
+
+    const avatarInput = document.getElementById('profileAvatarInput');
+    if (avatarInput) {
+        avatarInput.value = '';
+    }
+}
+
+function updateProfileAvatarPreview(avatarSrc, name) {
+    const preview = document.getElementById('profileAvatarPreview');
+    if (!preview) return;
+
+    const displayName = name || currentUser?.displayName || currentUser?.email || 'User';
+
+    if (avatarSrc) {
+        const safeSrc = escapeHtml(avatarSrc);
+        const alt = escapeHtml(`${displayName}'s avatar`);
+        preview.innerHTML = `<img src="${safeSrc}" alt="${alt}">`;
+    } else {
+        preview.innerHTML = `<span>${escapeHtml(getInitials(displayName))}</span>`;
+    }
+
+    const removeBtn = document.getElementById('profileAvatarRemoveBtn');
+    if (removeBtn) {
+        removeBtn.disabled = !avatarSrc;
+    }
+}
+
+function handleProfileAvatarChange(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showMessage('Please select an image file.', 'error');
+        event.target.value = '';
+        return;
+    }
+
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showMessage('Image size must be under 2 MB.', 'error');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+        const dataUrl = loadEvent.target?.result;
+        if (!dataUrl) return;
+        const form = document.getElementById('profileForm');
+        if (form) {
+            form.dataset.avatarDataUrl = dataUrl;
+            form.dataset.avatarRemoved = 'false';
+        }
+        const nameInput = document.getElementById('profileName');
+        const fallbackName = nameInput?.value || currentUser?.profile?.name || currentUser?.displayName || currentUser?.email || 'User';
+        updateProfileAvatarPreview(dataUrl, fallbackName);
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleProfileAvatarRemove(event) {
+    event.preventDefault();
+    const form = document.getElementById('profileForm');
+    if (!form) return;
+    form.dataset.avatarDataUrl = '';
+    form.dataset.avatarRemoved = 'true';
+
+    const avatarInput = document.getElementById('profileAvatarInput');
+    if (avatarInput) {
+        avatarInput.value = '';
+    }
+
+    const nameInput = document.getElementById('profileName');
+    const fallbackName = nameInput?.value || currentUser?.profile?.name || currentUser?.displayName || currentUser?.email || 'User';
+    updateProfileAvatarPreview('', fallbackName);
+}
+
+function handleProfileFormSubmit(event) {
+    event.preventDefault();
+    if (!currentUser) return;
+
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const name = (formData.get('profileName') || '').toString().trim();
+    const title = (formData.get('profileTitle') || '').toString().trim();
+    const bio = (formData.get('profileBio') || '').toString().trim();
+
+    const avatarRemoved = form.dataset.avatarRemoved === 'true';
+    let avatarData = form.dataset.avatarDataUrl || '';
+    if (avatarRemoved) {
+        avatarData = '';
+    } else if (!avatarData) {
+        avatarData = currentUser.profile?.avatar || currentUser.photo || '';
+    }
+
+    const updatedProfile = { ...(currentUser.profile || {}) };
+    updatedProfile.name = name;
+    updatedProfile.title = title;
+    updatedProfile.bio = bio;
+    updatedProfile.avatar = avatarData;
+
+    currentUser.profile = updatedProfile;
+
+    if (name) {
+        currentUser.displayName = name;
+    }
+
+    currentUser.photo = avatarData;
+
+    saveProfileToStorage(currentUser, updatedProfile);
+    displayUserInfo();
+    populateProfileForm();
+    closeModal('profileModal');
+    showMessage('Profile updated', 'success');
+}
+
+function setReferralLoadingState(state, options = {}) {
+    const card = document.getElementById('profileReferralCard');
+    if (!card) return;
+
+    card.dataset.state = state;
+
+    const linkValue = document.getElementById('referralLinkValue');
+    const copyBtn = document.getElementById('referralCopyBtn');
+    const statusBadge = document.getElementById('referralStatusBadge');
+    const nextStep = document.getElementById('referralNextStep');
+    const shareHint = document.getElementById('referralShareHint');
+    const levelBadge = document.getElementById('referralLevelBadge');
+
+    if (referralCopyResetTimer) {
+        clearTimeout(referralCopyResetTimer);
+        referralCopyResetTimer = null;
+    }
+
+    if (copyBtn) {
+        copyBtn.disabled = state !== 'ready';
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = 'Copy link';
+    }
+
+    if (state === 'loading') {
+        if (linkValue) {
+            linkValue.textContent = options.message || 'Generating your referral link…';
+            linkValue.dataset.placeholder = 'true';
+        }
+        if (statusBadge) statusBadge.textContent = 'Loading…';
+        if (nextStep) nextStep.textContent = '';
+        if (shareHint) shareHint.textContent = 'We are warming up your rewards dashboard.';
+        if (levelBadge) {
+            levelBadge.hidden = true;
+        }
+    } else if (state === 'error') {
+        if (linkValue) {
+            linkValue.textContent = options.message || 'Referral program is unavailable right now.';
+            linkValue.dataset.placeholder = 'true';
+        }
+        if (statusBadge) statusBadge.textContent = 'Unavailable';
+        if (nextStep) nextStep.textContent = options.detail || 'Please try again later or contact support.';
+        if (shareHint) shareHint.textContent = 'Our team has been notified. No action needed from you.';
+        if (levelBadge) {
+            levelBadge.hidden = true;
+        }
+    } else if (state === 'ready') {
+        if (linkValue) {
+            linkValue.removeAttribute('data-placeholder');
+        }
+    }
+}
+
+async function loadReferralCard(force = false) {
+    const now = Date.now();
+    if (!force && referralState.loaded && now - referralState.lastFetched < REFERRAL_REFRESH_INTERVAL) {
+        if (referralState.data) {
+            updateReferralUI(referralState.data);
+        }
+        return;
+    }
+
+    if (referralState.loading) return;
+
+    if (!referralState.loaded || !referralState.data || force) {
+        setReferralLoadingState('loading');
+    }
+    referralState.loading = true;
+    referralState.error = null;
+
+    try {
+        const response = await fetch(`${API_BASE}/referrals`);
+        if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+        }
+        const payload = await response.json();
+        if (!payload.success || !payload.referral) {
+            throw new Error(payload.error || 'Unable to load referral details');
+        }
+
+        referralState = {
+            loading: false,
+            loaded: true,
+            lastFetched: Date.now(),
+            data: payload.referral,
+            error: null
+        };
+
+        updateReferralUI(payload.referral);
+
+        if (payload.referral.planUpdated) {
+            loadSubscription();
+        }
+    } catch (error) {
+        console.error('Referral dashboard failed to load:', error);
+        referralState.loading = false;
+        referralState.error = error.message;
+        if (referralState.loaded && referralState.data) {
+            showMessage('Unable to refresh referral rewards. Showing your last saved stats.', 'error');
+            updateReferralUI(referralState.data);
+        } else {
+            setReferralLoadingState('error', {
+                message: 'Unable to load your referral rewards.',
+                detail: error.message
+            });
+        }
+    } finally {
+        referralState.loading = false;
+    }
+}
+
+function updateReferralUI(referral) {
+    if (!referral) return;
+
+    setReferralLoadingState('ready');
+
+    const statusBadge = document.getElementById('referralStatusBadge');
+    const linkValue = document.getElementById('referralLinkValue');
+    const copyBtn = document.getElementById('referralCopyBtn');
+    const paidCount = document.getElementById('referralPaidCount');
+    const pendingCount = document.getElementById('referralPendingCount');
+    const totalCount = document.getElementById('referralTotalCount');
+    const nextStep = document.getElementById('referralNextStep');
+    const shareHint = document.getElementById('referralShareHint');
+    const levelBadge = document.getElementById('referralLevelBadge');
+    const isDisabled = Boolean(referral.disabled);
+
+    if (linkValue) {
+        if (isDisabled) {
+            linkValue.textContent = 'Referral rewards are launching soon. Your link will appear here.';
+            linkValue.dataset.placeholder = 'true';
+        } else {
+            linkValue.textContent = referral.link;
+            linkValue.removeAttribute('data-placeholder');
+        }
+    }
+
+    if (copyBtn) {
+        copyBtn.classList.remove('copied');
+        if (isDisabled) {
+            copyBtn.disabled = true;
+            copyBtn.textContent = 'Coming soon';
+            delete copyBtn.dataset.clipboard;
+        } else {
+            copyBtn.disabled = false;
+            copyBtn.dataset.clipboard = referral.link;
+            copyBtn.textContent = 'Copy link';
+        }
+    }
+
+    if (paidCount) paidCount.textContent = referral.paidReferrals ?? 0;
+    if (pendingCount) pendingCount.textContent = referral.pendingReferrals ?? 0;
+    if (totalCount) totalCount.textContent = referral.totalReferrals ?? 0;
+
+    if (statusBadge) {
+        if (isDisabled) {
+            statusBadge.textContent = 'Launching soon';
+        } else if (referral.unlockedPlan) {
+            statusBadge.textContent = `Unlocked · ${formatPlanName(referral.unlockedPlan)}`;
+        } else if (referral.paidReferrals > 0) {
+            statusBadge.textContent = `${referral.paidReferrals} referral${referral.paidReferrals === 1 ? '' : 's'} completed`;
+        } else {
+            statusBadge.textContent = 'Your journey starts here';
+        }
+    }
+
+    if (nextStep) {
+        if (isDisabled) {
+            nextStep.textContent = 'Hang tight! We will notify you as soon as referral rewards go live.';
+        } else if (referral.remainingToNext > 0 && referral.nextMilestone) {
+            const planLabel = formatPlanName(referral.nextMilestone.plan);
+            nextStep.innerHTML = `Only <strong>${referral.remainingToNext}</strong> more referral${referral.remainingToNext === 1 ? '' : 's'} to unlock <strong>${planLabel}</strong>.`;
+        } else if (referral.unlockedPlan) {
+            const planLabel = formatPlanName(referral.unlockedPlan);
+            nextStep.innerHTML = `You’re enjoying <strong>${planLabel}</strong> at no cost — thank you for sharing the love!`;
+        } else {
+            nextStep.innerHTML = `Send your link to unlock <strong>${formatPlanName('starter')}</strong> for free.`;
+        }
+    }
+
+    if (shareHint) {
+        shareHint.textContent = referral.shareMessage || 'Each paid referral unlocks the next tier automatically.';
+    }
+
+    renderReferralMilestones(referral.milestones, referral.paidReferrals);
+
+    if (levelBadge) {
+        levelBadge.hidden = false;
+        levelBadge.classList.remove('locked');
+        if (isDisabled) {
+            levelBadge.textContent = '🚧 Prelaunch';
+            levelBadge.classList.add('locked');
+        } else if (referral.currentLevel) {
+            const levelIndex = referral.currentLevel.levelIndex || referral.milestones.find((m) => m.levelKey === referral.currentLevel.levelKey)?.levelIndex || 1;
+            levelBadge.textContent = `${referral.currentLevel.icon || '⭐️'} Level ${levelIndex}: ${referral.currentLevel.levelName}`;
+        } else if (referral.nextLevel) {
+            const levelIndex = referral.nextLevel.levelIndex || referral.milestones.find((m) => m.levelKey === referral.nextLevel.levelKey)?.levelIndex || 1;
+            levelBadge.textContent = `${referral.nextLevel.icon || '⭐️'} Level ${levelIndex}: ${referral.nextLevel.levelName}`;
+            levelBadge.classList.add('locked');
+        } else {
+            levelBadge.textContent = '✨ Keep going!';
+        }
+    }
+}
+
+function renderReferralMilestones(milestones, paidReferrals = 0) {
+    const container = document.getElementById('referralMilestones');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!Array.isArray(milestones) || milestones.length === 0) {
+        const placeholder = document.createElement('li');
+        placeholder.className = 'referral-milestones-empty';
+        placeholder.textContent = 'No rewards configured yet. Check back soon!';
+        container.appendChild(placeholder);
+        return;
+    }
+
+    milestones.forEach((milestone) => {
+        const item = document.createElement('li');
+        const unlocked = Boolean(milestone.unlocked);
+        item.className = `milestone ${unlocked ? 'unlocked' : 'upcoming'}`;
+
+        const label = document.createElement('div');
+        label.className = 'milestone-label';
+        const levelIndex = milestone.levelIndex || milestones.indexOf(milestone) + 1;
+        const icon = milestone.icon || '⭐️';
+        const referralCopy = milestone.count === 1 ? 'Referral' : 'Referrals';
+        label.innerHTML = `
+            <span class="milestone-icon">${icon}</span>
+            <div class="milestone-text">
+                <strong>Level ${levelIndex}: ${milestone.levelName || ''}</strong>
+                <span>${milestone.count} ${referralCopy}</span>
+            </div>
+        `;
+
+        const plan = document.createElement('div');
+        plan.className = 'milestone-plan';
+        plan.textContent = `Unlocks ${formatPlanName(milestone.plan)}`;
+
+        const progress = document.createElement('div');
+        progress.className = 'milestone-progress';
+        if (unlocked) {
+            progress.textContent = 'Unlocked';
+        } else {
+            const remaining = Math.max(0, milestone.remaining ?? (milestone.count - paidReferrals));
+            progress.textContent = `${remaining} to go`;
+        }
+
+        item.appendChild(label);
+        item.appendChild(plan);
+        item.appendChild(progress);
+
+        container.appendChild(item);
+    });
+}
+
+function formatPlanName(plan) {
+    if (!plan) return 'Free Plan';
+    const normalized = String(plan).toLowerCase();
+    return PLAN_DISPLAY_NAMES[normalized] || plan;
+}
+
+function handleReferralCopyClick(event) {
+    const button = event.currentTarget;
+    const link = button?.dataset?.clipboard;
+    if (!link) return;
+
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        const manualCopy = window.prompt('Copy your referral link and share it anywhere:', link);
+        if (manualCopy !== null) {
+            showMessage('Referral link ready to share!', 'success');
+        }
+        return;
+    }
+
+    navigator.clipboard.writeText(link).then(() => {
+        button.classList.add('copied');
+        button.textContent = 'Copied!';
+        referralCopyResetTimer = setTimeout(() => {
+            button.classList.remove('copied');
+            button.textContent = 'Copy link';
+        }, 2500);
+    }).catch((error) => {
+        console.error('Failed to copy referral link:', error);
+        showMessage('Unable to copy the referral link. Please copy it manually.', 'error');
+    });
 }
 
 async function loadLocations() {
@@ -231,6 +829,7 @@ function selectLocation(locationId) {
         } else {
             loadLocationSettings();
         }
+        updateBreadcrumb();
     }
 }
 
@@ -238,9 +837,53 @@ function showNoLocation() {
     document.getElementById('no-location').style.display = 'block';
     document.getElementById('location-content').style.display = 'none';
     document.getElementById('connectionStatus').textContent = '';
+    updateBreadcrumb();
 }
 
-function switchTab(tab) {
+function updateBreadcrumb() {
+    const breadcrumbEl = document.getElementById('breadcrumb');
+    if (!breadcrumbEl) return;
+
+    const crumbs = [
+        { label: 'Home', href: '/' }
+    ];
+
+    if (selectedLocation) {
+        const locationLabel = selectedLocation.ghlName || selectedLocation.name || 'Location';
+        crumbs.push({ label: locationLabel });
+        const tabLabel = TAB_LABELS[currentTab] || 'Overview';
+        crumbs.push({ label: tabLabel });
+    } else {
+        crumbs.push({ label: 'Dashboard' });
+    }
+
+    const markup = [
+        '<ol>',
+        ...crumbs.map((crumb, index) => {
+            const isLast = index === crumbs.length - 1;
+            const safeLabel = escapeHtml(crumb.label);
+            if (isLast) {
+                return `<li class="current" aria-current="page">${safeLabel}</li>`;
+            }
+            if (crumb.href) {
+                return `<li><a href="${crumb.href}">${safeLabel}</a></li>`;
+            }
+            return `<li>${safeLabel}</li>`;
+        }),
+        '</ol>'
+    ].join('');
+
+    breadcrumbEl.innerHTML = markup;
+}
+
+function switchTab(evtOrTab, maybeTab) {
+    let tab = maybeTab;
+    let evt = evtOrTab;
+    if (typeof evtOrTab === 'string' && !maybeTab) {
+        tab = evtOrTab;
+        evt = null;
+    }
+
     currentTab = tab;
     // Update body background based on tab
     document.body.className = `tab-${tab}`;
@@ -248,14 +891,28 @@ function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+
+    if (evt?.currentTarget) {
+        evt.currentTarget.classList.add('active');
+    } else {
+        const fallbackBtn = document.querySelector(`.tab[data-tab="${tab}"]`);
+        if (fallbackBtn) {
+            fallbackBtn.classList.add('active');
+        }
+    }
     
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
-    document.getElementById(`${tab}-section`).classList.add('active');
+    const activeSection = document.getElementById(`${tab}-section`);
+    if (activeSection) {
+        activeSection.classList.add('active');
+    }
     
-    if (!selectedLocation) return;
+    if (!selectedLocation) {
+        updateBreadcrumb();
+        return;
+    }
     
     if (tab === 'fields') {
         loadCustomFields();
@@ -272,6 +929,7 @@ function switchTab(tab) {
     } else {
         loadLocationSettings();
     }
+    updateBreadcrumb();
 }
 
 async function loadCustomFields() {

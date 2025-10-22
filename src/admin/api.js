@@ -70,6 +70,17 @@ export async function saveTemplate(template) {
   return handleResponse(response);
 }
 
+export async function deleteTemplate(templateId) {
+  if (!templateId) {
+    throw new Error('Template id required');
+  }
+  const response = await fetch(`/api/onboarding/templates/${templateId}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  return handleResponse(response);
+}
+
 export async function publishTemplate(template) {
   if (!template.id) {
     throw new Error('Save the template before publishing');
@@ -83,6 +94,26 @@ export async function publishTemplate(template) {
       },
       credentials: 'include',
       body: JSON.stringify({ template })
+    }
+  );
+  return handleResponse(response);
+}
+
+export async function cloneTemplate(templateId, payload = {}) {
+  if (!templateId) {
+    throw new Error('Template id required');
+  }
+  const body =
+    payload && typeof payload === 'object' && Object.keys(payload).length > 0
+      ? JSON.stringify(payload)
+      : null;
+  const response = await fetch(
+    `/api/onboarding/templates/${templateId}/clone`,
+    {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'include',
+      body
     }
   );
   return handleResponse(response);

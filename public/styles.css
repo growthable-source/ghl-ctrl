@@ -33,6 +33,98 @@ header {
     gap: 20px;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.feedback-link {
+    text-decoration: none;
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: rgba(102, 126, 234, 0.12);
+    color: #2d3748;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.18);
+}
+
+.nav-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(102, 126, 234, 0.25);
+}
+
+.nav-btn-icon {
+    font-size: 20px;
+}
+
+.breadcrumb {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 14px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+}
+
+.breadcrumb ol {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.breadcrumb li {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #4a5568;
+}
+
+.breadcrumb li + li::before {
+    content: "›";
+    font-size: 16px;
+    color: #a0aec0;
+    margin-right: 2px;
+}
+
+.breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb a:hover {
+    color: #2d3748;
+}
+
+.breadcrumb .current {
+    font-weight: 700;
+    color: #2d3748;
+}
+
 h1 {
     color: #333;
     font-size: 24px;
@@ -44,11 +136,75 @@ h1 {
     gap: 15px;
 }
 
-.user-info img {
-    width: 32px;
-    height: 32px;
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-profile:hover {
+    background: rgba(102, 126, 234, 0.12);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.15);
+}
+
+.user-profile:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: 2px solid #667eea;
+    background: #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.user-avatar-initials {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+    text-transform: capitalize;
+}
+
+.user-title {
+    font-size: 12px;
+    color: #718096;
 }
 
 .logout-btn {
@@ -342,6 +498,411 @@ input:focus, select:focus, textarea:focus {
 
 .close-modal:hover {
     color: #333;
+}
+
+.profile-modal-content {
+    max-width: 520px;
+}
+
+.profile-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.profile-avatar-preview {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 3px solid #667eea;
+    background: #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 32px;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.profile-avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.profile-avatar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar-upload-input {
+    position: relative;
+    overflow: hidden;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avatar-upload-input:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(102, 126, 234, 0.25);
+}
+
+.avatar-upload-input input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.avatar-remove-btn {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px 0;
+}
+
+.avatar-remove-btn:disabled {
+    color: #cbd5f5;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.avatar-hint {
+    font-size: 12px;
+    color: #718096;
+    text-align: center;
+    max-width: 260px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.profile-referral-card {
+    margin-top: 28px;
+    padding: 24px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f8f5ff 0%, #eef2ff 100%);
+    box-shadow: 0 18px 36px rgba(102, 126, 234, 0.18);
+    border: 1px solid rgba(102, 126, 234, 0.14);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-referral-card[data-state="loading"] {
+    opacity: 0.7;
+}
+
+.profile-referral-card[data-state="error"] {
+    background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+    border-color: rgba(229, 62, 62, 0.35);
+    box-shadow: 0 18px 36px rgba(229, 62, 62, 0.18);
+}
+
+.profile-referral-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px rgba(102, 126, 234, 0.22);
+}
+
+.referral-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.referral-header h3 {
+    font-size: 18px;
+    color: #373b8a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.referral-header h3::before {
+    content: "✨";
+    font-size: 20px;
+}
+
+.referral-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.referral-level-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(246, 224, 94, 0.24), rgba(255, 255, 255, 0.6));
+    color: #b7791f;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 0 0 1px rgba(214, 158, 46, 0.35);
+    text-transform: uppercase;
+}
+
+.referral-level-badge.locked {
+    background: linear-gradient(135deg, rgba(203, 213, 224, 0.3), rgba(255, 255, 255, 0.6));
+    color: #4a5568;
+    box-shadow: inset 0 0 0 1px rgba(160, 174, 192, 0.45);
+}
+
+.referral-status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4c51bf;
+    background: rgba(76, 81, 191, 0.12);
+    border-radius: 999px;
+    padding: 6px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.profile-referral-card[data-state="error"] .referral-status-badge {
+    color: #c53030;
+    background: rgba(197, 48, 48, 0.12);
+}
+
+.referral-description {
+    color: #4a5568;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.referral-link-box {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.referral-link-value {
+    flex: 1;
+    font-size: 14px;
+    color: #2d3748;
+    word-break: break-all;
+}
+
+.referral-link-value[data-placeholder] {
+    color: #718096;
+    font-style: italic;
+}
+
+.referral-copy-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.referral-copy-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.referral-copy-btn.copied {
+    background: #48bb78;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(72, 187, 120, 0.26);
+}
+
+.referral-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 14px;
+}
+
+.referral-count {
+    background: rgba(102, 126, 234, 0.08);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.referral-count:hover {
+    background: rgba(102, 126, 234, 0.14);
+    transform: translateY(-1px);
+}
+
+.referral-count strong {
+    display: block;
+    font-size: 22px;
+    color: #373b8a;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.referral-count span {
+    font-size: 12px;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.referral-milestones {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.referral-milestones li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.referral-milestones-empty {
+    text-align: center;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px dashed rgba(102, 126, 234, 0.4);
+    color: #4a5568;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.referral-milestones li .milestone-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #2d3748;
+}
+
+.referral-milestones li .milestone-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.18);
+    color: #4c51bf;
+    font-size: 18px;
+    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.22);
+}
+
+.referral-milestones li .milestone-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.referral-milestones li .milestone-text strong {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.referral-milestones li .milestone-text span {
+    font-size: 12px;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.referral-milestones li.unlocked {
+    border-color: rgba(72, 187, 120, 0.4);
+    box-shadow: 0 12px 24px rgba(72, 187, 120, 0.18);
+    background: linear-gradient(135deg, rgba(129, 230, 217, 0.18), rgba(79, 209, 197, 0.1));
+}
+
+.referral-milestones li.unlocked .milestone-icon {
+    background: rgba(72, 187, 120, 0.22);
+    color: #2f855a;
+    box-shadow: inset 0 0 0 1px rgba(47, 133, 90, 0.25);
+}
+
+.referral-milestones li.unlocked .milestone-plan {
+    color: #22543d;
+}
+
+.referral-milestones li.upcoming {
+    opacity: 0.88;
+}
+
+.referral-milestones .milestone-plan {
+    font-size: 13px;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.referral-milestones .milestone-progress {
+    font-size: 12px;
+    color: #4c51bf;
+    font-weight: 600;
+}
+
+.referral-next {
+    font-size: 13px;
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.profile-referral-card[data-state="ready"] .referral-next strong {
+    color: #4c51bf;
+}
+
+.profile-referral-card[data-state="error"] .referral-next {
+    color: #c53030;
+}
+
+.referral-share-hint {
+    font-size: 12px;
+    color: #4a5568;
+    opacity: 0.85;
+}
+
+.referral-share-hint::before {
+    content: "💌";
+    margin-right: 6px;
+}
+
+.referral-error-message {
+    font-size: 13px;
+    color: #c53030;
+    background: rgba(229, 62, 62, 0.1);
+    border-radius: 12px;
+    padding: 10px 14px;
 }
 
 .location-status {
