@@ -2462,8 +2462,20 @@ app.post('/api/locations/:locationId/custom-fields', ensureAuthenticated, async 
     });
   }
   
-  const { name, dataType, placeholder, position, model } = req.body;
-  
+  const {
+    name,
+    dataType,
+    placeholder,
+    position,
+    model,
+    description,
+    showInForms,
+    options,
+    allowCustomOption,
+    acceptedFormats,
+    maxFileLimit
+  } = req.body;
+
   if (!name || !dataType) {
     return res.status(400).json({
       success: false,
@@ -2471,25 +2483,134 @@ app.post('/api/locations/:locationId/custom-fields', ensureAuthenticated, async 
     });
   }
   
-  const allowedDataTypes = ['TEXT', 'TEXTBOX_LIST', 'NUMBER', 'PHONE', 'MONETARYAMOUNT', 
-                            'CHECKBOX', 'DROPDOWN', 'RADIO', 'DATE'];
-  if (!allowedDataTypes.includes(dataType)) {
+  const typeAliases = {
+    NUMBER: 'NUMERICAL',
+    NUMBERS: 'NUMERICAL',
+    NUMERIC: 'NUMERICAL',
+    MONETARYAMOUNT: 'MONETORY',
+    MONETORYAMOUNT: 'MONETORY',
+    MONETARY: 'MONETORY',
+    MONETORYAMOUNTUSD: 'MONETORY',
+    DROPDOWN: 'SINGLE_OPTIONS',
+    MULTIPLECHOICE: 'MULTIPLE_OPTIONS',
+    MULTIPLE_CHOICE: 'MULTIPLE_OPTIONS',
+    CHECKBOX_GROUP: 'MULTIPLE_OPTIONS',
+    CHECKBOXES: 'MULTIPLE_OPTIONS',
+    LONG_TEXT: 'LARGE_TEXT',
+    TEXTAREA: 'LARGE_TEXT',
+    FILEUPLOAD: 'FILE_UPLOAD',
+    SIGN: 'SIGNATURE'
+  };
+  const allowedDataTypes = [
+    'TEXT',
+    'LARGE_TEXT',
+    'TEXTBOX_LIST',
+    'NUMERICAL',
+    'PHONE',
+    'MONETORY',
+    'SINGLE_OPTIONS',
+    'MULTIPLE_OPTIONS',
+    'RADIO',
+    'CHECKBOX',
+    'DATE',
+    'FILE_UPLOAD',
+    'SIGNATURE'
+  ];
+
+  const resolvedDataType = (() => {
+    const raw = typeof dataType === 'string' ? dataType.toUpperCase() : '';
+    if (allowedDataTypes.includes(raw)) return raw;
+    if (typeAliases[raw] && allowedDataTypes.includes(typeAliases[raw])) {
+      return typeAliases[raw];
+    }
+    return raw;
+  })();
+
+  if (!allowedDataTypes.includes(resolvedDataType)) {
     return res.status(400).json({
       success: false,
       error: `Invalid dataType. Must be one of: ${allowedDataTypes.join(', ')}`
     });
   }
+
+  const coerceBoolean = (value, defaultValue = false) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      if (value.toLowerCase() === 'true') return true;
+      if (value.toLowerCase() === 'false') return false;
+    }
+    return defaultValue;
+  };
+
+  const slugifyOption = (value, fallback) => {
+    if (!value) return fallback;
+    let slug = value
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!slug) {
+      slug = fallback;
+    }
+    return slug;
+  };
   
   try {
     const client = createGHLClient(location.token);
     const payload = {
       name,
-      dataType,
+      dataType: resolvedDataType,
       placeholder: placeholder || '',
-      position: position || 0,
-      model: model || 'contact'
+      position: Number.isFinite(Number(position)) ? Number(position) : 0,
+      model: model || 'contact',
+      showInForms: coerceBoolean(showInForms, true)
     };
-    
+
+    if (description) {
+      payload.description = description;
+    }
+
+    const optionEnabledTypes = new Set(['SINGLE_OPTIONS', 'MULTIPLE_OPTIONS', 'RADIO', 'TEXTBOX_LIST']);
+    if (optionEnabledTypes.has(resolvedDataType) && Array.isArray(options) && options.length > 0) {
+      const normalizedOptions = [];
+      options.forEach((option) => {
+        let rawLabel = '';
+        if (typeof option === 'string' || typeof option === 'number') {
+          rawLabel = option;
+        } else if (option && typeof option.label !== 'undefined') {
+          rawLabel = option.label;
+        }
+        const label =
+          typeof rawLabel === 'string'
+            ? rawLabel.trim()
+            : rawLabel === null || rawLabel === undefined
+            ? ''
+            : String(rawLabel).trim();
+        if (!label) return;
+        normalizedOptions.push(label);
+      });
+      if (normalizedOptions.length > 0) {
+        payload.options = normalizedOptions;
+      }
+    }
+
+    if (resolvedDataType === 'RADIO') {
+      payload.allowCustomOption = coerceBoolean(allowCustomOption, false);
+    }
+
+    if (resolvedDataType === 'FILE_UPLOAD') {
+      if (acceptedFormats && typeof acceptedFormats === 'string') {
+        payload.acceptedFormats = acceptedFormats.trim();
+      }
+      const numericLimit = Number(maxFileLimit);
+      if (Number.isFinite(numericLimit) && numericLimit > 0) {
+        payload.maxFileLimit = numericLimit;
+      }
+    }
+
+    console.log('Creating custom field payload', JSON.stringify(payload));
+
     const response = await client.post(`/locations/${location.locationId}/customFields`, payload);
     
     location.lastUsed = new Date().toISOString();

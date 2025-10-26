@@ -175,6 +175,356 @@ function syncIntercom(user) {
     }
 }
 
+const FIELD_TYPE_ALIASES = {
+    NUMBER: 'NUMERICAL',
+    NUMERIC: 'NUMERICAL',
+    MONETARY: 'MONETORY',
+    MONETARYAMOUNT: 'MONETORY',
+    MONETORYAMOUNT: 'MONETORY',
+    DROPDOWN: 'SINGLE_OPTIONS',
+    SELECT: 'SINGLE_OPTIONS',
+    MULTIPLE_CHOICE: 'MULTIPLE_OPTIONS',
+    CHECKBOX_GROUP: 'MULTIPLE_OPTIONS',
+    CHECKBOXES: 'MULTIPLE_OPTIONS',
+    LONG_TEXT: 'LARGE_TEXT',
+    TEXTAREA: 'LARGE_TEXT',
+    DATEPICKER: 'DATE',
+    FILEUPLOAD: 'FILE_UPLOAD',
+    SIGN: 'SIGNATURE'
+};
+const FIELD_OPTION_TYPES = new Set(['SINGLE_OPTIONS', 'MULTIPLE_OPTIONS', 'RADIO', 'TEXTBOX_LIST']);
+const FIELD_ALLOW_CUSTOM_OPTION_TYPES = new Set(['RADIO']);
+const FIELD_FILE_TYPES = new Set(['FILE_UPLOAD']);
+const FIELD_DATE_TYPES = new Set(['DATE']);
+const FIELD_TIME_TYPES = new Set(['TIME']);
+let createFieldModalEl = null;
+let fieldTypeSelectionEl = null;
+let fieldDetailsStepEl = null;
+let fieldTypeButtons = [];
+
+function normalizeFieldDataType(rawType) {
+    if (!rawType) return '';
+    const upper = rawType.toUpperCase();
+    return FIELD_TYPE_ALIASES[upper] || upper;
+}
+
+function slugifyOptionLabel(value) {
+    if (!value) return `option_${Math.random().toString(36).slice(2, 8)}`;
+    let slug = value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    if (!slug) {
+        slug = `option_${Math.random().toString(36).slice(2, 8)}`;
+    }
+    return slug;
+}
+
+function createFieldOptionRow(list, initialLabel = '') {
+    const row = document.createElement('div');
+    row.className = 'field-option-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'field-option-input field-option-label';
+    input.placeholder = 'Option label';
+    input.value = initialLabel;
+    row.appendChild(input);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-option-btn';
+    removeBtn.setAttribute('aria-label', 'Remove option');
+    removeBtn.innerHTML = '&times;';
+    row.appendChild(removeBtn);
+
+    list.appendChild(row);
+    refreshFieldOptionRemoveState(list);
+    return row;
+}
+
+function refreshFieldOptionRemoveState(list) {
+    const rows = Array.from(list.querySelectorAll('.field-option-row'));
+    rows.forEach((row) => {
+        const removeBtn = row.querySelector('.remove-option-btn');
+        if (!removeBtn) return;
+        const disabled = rows.length <= 1;
+        removeBtn.disabled = disabled;
+        removeBtn.classList.toggle('disabled', disabled);
+    });
+}
+
+function collectFieldOptions(list) {
+    if (!list) return [];
+    const rows = Array.from(list.querySelectorAll('.field-option-row'));
+    const usedKeys = new Set();
+    const options = [];
+
+    rows.forEach((row, index) => {
+        const labelInput = row.querySelector('.field-option-label');
+        if (!labelInput) return;
+        const label = labelInput.value.trim();
+        if (!label) return;
+        let baseKey = slugifyOptionLabel(label);
+        let key = baseKey;
+        let suffix = 1;
+        while (usedKeys.has(key)) {
+            key = `${baseKey}_${suffix}`;
+            suffix += 1;
+        }
+        usedKeys.add(key);
+        options.push({ key, label });
+    });
+
+    return options;
+}
+
+function showFieldModalStep(step) {
+    if (!fieldTypeSelectionEl || !fieldDetailsStepEl) return;
+    if (step === 'select') {
+        fieldTypeSelectionEl.classList.remove('hidden');
+        fieldDetailsStepEl.classList.add('hidden');
+        fieldTypeButtons.forEach((btn) => btn.classList.remove('selected'));
+    } else {
+        fieldTypeSelectionEl.classList.add('hidden');
+        fieldDetailsStepEl.classList.remove('hidden');
+    }
+}
+
+function openCreateFieldModal() {
+    if (!createFieldModalEl) return;
+    resetCustomFieldForm();
+    showFieldModalStep('select');
+    createFieldModalEl.classList.add('show');
+    document.body.classList.add('modal-open');
+    const firstBtn = createFieldModalEl.querySelector('.field-type-btn');
+    firstBtn?.focus();
+}
+
+function closeCreateFieldModal() {
+    if (!createFieldModalEl) return;
+    createFieldModalEl.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    showFieldModalStep('select');
+}
+
+function handleFieldTypeSelected(rawType, label, button) {
+    const dataTypeSelect = document.getElementById('fieldDataType');
+    if (!dataTypeSelect) return;
+    const normalized = normalizeFieldDataType(rawType);
+    dataTypeSelect.value = normalized;
+    updateFieldTypeUI(normalized, true);
+    const badge = document.getElementById('selectedFieldTypeBadge');
+    if (badge) {
+        badge.textContent = label || normalized;
+    }
+    fieldTypeButtons.forEach((btn) => btn.classList.toggle('selected', btn === button));
+    showFieldModalStep('details');
+    const nameInput = document.getElementById('fieldName');
+    nameInput?.focus();
+}
+
+function resetCustomFieldForm() {
+    const form = document.getElementById('createFieldForm');
+    if (!form) return;
+    form.reset();
+
+    const placeholderInput = document.getElementById('fieldPlaceholder');
+    if (placeholderInput) {
+        placeholderInput.type = placeholderInput.dataset.originalType || 'text';
+        placeholderInput.placeholder = 'Placeholder';
+        placeholderInput.value = '';
+        delete placeholderInput.dataset.previousValue;
+    }
+
+    const optionsList = document.getElementById('fieldOptionsList');
+    if (optionsList) {
+        optionsList.innerHTML = '';
+    }
+
+    const allowCustom = document.getElementById('fieldAllowCustomOption');
+    if (allowCustom) {
+        allowCustom.checked = false;
+    }
+
+    const acceptedFormatsInput = document.getElementById('fieldAcceptedFormats');
+    if (acceptedFormatsInput) {
+        acceptedFormatsInput.value = '';
+    }
+
+    const maxFileLimitInput = document.getElementById('fieldMaxFileLimit');
+    if (maxFileLimitInput) {
+        maxFileLimitInput.value = '1';
+    }
+
+    const showInForms = document.getElementById('fieldShowInForms');
+    if (showInForms) {
+        showInForms.checked = true;
+    }
+
+    const dataTypeSelect = document.getElementById('fieldDataType');
+    if (dataTypeSelect) {
+        updateFieldTypeUI(dataTypeSelect.value, true);
+    }
+
+    const typeBadge = document.getElementById('selectedFieldTypeBadge');
+    if (typeBadge) {
+        typeBadge.textContent = 'Single Line';
+    }
+}
+
+function updateFieldTypeUI(rawType, resetOptions = false) {
+    const normalized = normalizeFieldDataType(rawType);
+    const optionsContainer = document.getElementById('fieldOptionsContainer');
+    const optionsList = document.getElementById('fieldOptionsList');
+    const allowCustomRow = document.getElementById('fieldAllowCustomOptionRow');
+    const allowCustomInput = document.getElementById('fieldAllowCustomOption');
+    const placeholderInput = document.getElementById('fieldPlaceholder');
+    const fileControls = document.getElementById('fieldFileControls');
+    const acceptedFormatsInput = document.getElementById('fieldAcceptedFormats');
+    const maxFileLimitInput = document.getElementById('fieldMaxFileLimit');
+
+    const showOptions = FIELD_OPTION_TYPES.has(normalized);
+    if (optionsContainer) {
+        optionsContainer.style.display = showOptions ? 'block' : 'none';
+        if (optionsList) {
+            if (resetOptions) {
+                optionsList.innerHTML = '';
+            }
+            if (showOptions && optionsList.children.length === 0) {
+                createFieldOptionRow(optionsList, 'Option 1');
+                createFieldOptionRow(optionsList, 'Option 2');
+            }
+            refreshFieldOptionRemoveState(optionsList);
+        }
+    }
+
+    if (allowCustomRow) {
+        const showCustom = FIELD_ALLOW_CUSTOM_OPTION_TYPES.has(normalized);
+        allowCustomRow.style.display = showCustom ? 'flex' : 'none';
+        if (!showCustom && allowCustomInput) {
+            allowCustomInput.checked = false;
+        }
+    }
+
+    if (placeholderInput) {
+        const isDate = FIELD_DATE_TYPES.has(normalized);
+        if (isDate) {
+            if (placeholderInput.type !== 'date') {
+                placeholderInput.dataset.previousValue = placeholderInput.value || '';
+            }
+            placeholderInput.type = 'date';
+            placeholderInput.placeholder = '';
+        } else {
+            const originalType = placeholderInput.dataset.originalType || 'text';
+            placeholderInput.type = originalType;
+            placeholderInput.placeholder = 'Placeholder';
+            if (!placeholderInput.value && placeholderInput.dataset.previousValue) {
+                placeholderInput.value = placeholderInput.dataset.previousValue;
+            }
+            delete placeholderInput.dataset.previousValue;
+        }
+    }
+
+    if (fileControls) {
+        const isFileType = FIELD_FILE_TYPES.has(normalized);
+        fileControls.style.display = isFileType ? 'grid' : 'none';
+        if (!isFileType) {
+            if (acceptedFormatsInput) acceptedFormatsInput.value = '';
+            if (maxFileLimitInput) maxFileLimitInput.value = '1';
+        }
+    }
+}
+
+function initializeCustomFieldForm() {
+    const form = document.getElementById('createFieldForm');
+    if (!form || form.dataset.enhanced === 'true') return;
+    form.dataset.enhanced = 'true';
+
+    const dataTypeSelect = document.getElementById('fieldDataType');
+    const optionsList = document.getElementById('fieldOptionsList');
+    const addOptionBtn = document.getElementById('addFieldOptionBtn');
+
+    if (addOptionBtn && optionsList) {
+        addOptionBtn.addEventListener('click', () => {
+            const row = createFieldOptionRow(optionsList);
+            const input = row.querySelector('.field-option-label');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        });
+
+        optionsList.addEventListener('click', (event) => {
+            const removeBtn = event.target.closest('.remove-option-btn');
+            if (!removeBtn) return;
+            const row = removeBtn.closest('.field-option-row');
+            if (!row) return;
+            row.remove();
+            refreshFieldOptionRemoveState(optionsList);
+        });
+    }
+
+    if (dataTypeSelect) {
+        dataTypeSelect.addEventListener('change', (event) => {
+            updateFieldTypeUI(event.target.value);
+        });
+        updateFieldTypeUI(dataTypeSelect.value, true);
+    }
+}
+
+function initializeCustomFieldModal() {
+    createFieldModalEl = document.getElementById('createFieldModal');
+    if (!createFieldModalEl || createFieldModalEl.dataset.bound === 'true') return;
+    createFieldModalEl.dataset.bound = 'true';
+
+    fieldTypeSelectionEl = document.getElementById('fieldTypeSelection');
+    fieldDetailsStepEl = document.getElementById('fieldDetailsStep');
+    fieldTypeButtons = Array.from(createFieldModalEl.querySelectorAll('.field-type-btn'));
+
+    const openBtn = document.getElementById('openCreateFieldModalBtn');
+    const closeBtn = document.getElementById('closeCreateFieldModalBtn');
+    const cancelBtn = document.getElementById('createFieldCancelBtn');
+    const backBtn = document.getElementById('fieldTypeBackBtn');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', openCreateFieldModal);
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeCreateFieldModal);
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeCreateFieldModal);
+    }
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            showFieldModalStep('select');
+            const badge = document.getElementById('selectedFieldTypeBadge');
+            if (badge) badge.textContent = 'Single Line';
+        });
+    }
+
+    fieldTypeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const type = btn.dataset.fieldType;
+            const primaryLabel = btn.querySelector('span')?.textContent?.trim() || type;
+            handleFieldTypeSelected(type, primaryLabel, btn);
+        });
+    });
+
+    createFieldModalEl.addEventListener('click', (event) => {
+        if (event.target === createFieldModalEl) {
+            closeCreateFieldModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && createFieldModalEl.classList.contains('show')) {
+            closeCreateFieldModal();
+        }
+    });
+}
 function escapeHtml(text) {
     if (text === undefined || text === null) return '';
     return String(text).replace(/[&<>"']/g, (char) => {
@@ -252,6 +602,8 @@ document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
     setupFilterListeners();
     updateBreadcrumb();
+    initializeCustomFieldForm();
+    initializeCustomFieldModal();
 });
 
 async function checkAuthentication() {
@@ -2929,28 +3281,92 @@ function setupFormHandlers() {
     
     document.getElementById('createFieldForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         if (!selectedLocation) {
             showMessage('Please select a location first', 'error');
             return;
         }
-        
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData);
-        
+
+        const nameInput = document.getElementById('fieldName');
+        const dataTypeSelect = document.getElementById('fieldDataType');
+        const placeholderInput = document.getElementById('fieldPlaceholder');
+        const descriptionInput = document.getElementById('fieldDescription');
+        const modelSelect = document.getElementById('fieldModel');
+        const showInFormsCheckbox = document.getElementById('fieldShowInForms');
+        const optionsList = document.getElementById('fieldOptionsList');
+        const allowCustomCheckbox = document.getElementById('fieldAllowCustomOption');
+        const acceptedFormatsInput = document.getElementById('fieldAcceptedFormats');
+        const maxFileLimitInput = document.getElementById('fieldMaxFileLimit');
+
+        const rawDataType = dataTypeSelect?.value || '';
+        const normalizedType = normalizeFieldDataType(rawDataType);
+
+        const name = nameInput?.value.trim();
+        if (!name) {
+            showMessage('Field name is required.', 'error');
+            nameInput?.focus();
+            return;
+        }
+
+        if (!normalizedType) {
+            showMessage('Unsupported or missing data type.', 'error');
+            return;
+        }
+
+        const requiresOptions = FIELD_OPTION_TYPES.has(normalizedType);
+        const options = collectFieldOptions(optionsList);
+        if (requiresOptions && options.length === 0) {
+            showMessage('Please add at least one option for this field.', 'error');
+            return;
+        }
+
+        let placeholderValue = placeholderInput?.value || '';
+        if (FIELD_DATE_TYPES.has(normalizedType) || FIELD_TIME_TYPES.has(normalizedType)) {
+            placeholderValue = '';
+        }
+
+        const payload = {
+            name,
+            dataType: normalizedType,
+            placeholder: placeholderValue,
+            model: modelSelect?.value || 'contact',
+            description: descriptionInput?.value.trim() || '',
+            showInForms: showInFormsCheckbox ? Boolean(showInFormsCheckbox.checked) : true
+        };
+
+        if (requiresOptions) {
+            payload.options = options;
+        }
+
+        if (FIELD_ALLOW_CUSTOM_OPTION_TYPES.has(normalizedType)) {
+            payload.allowCustomOption = Boolean(allowCustomCheckbox?.checked);
+        }
+
+        if (FIELD_FILE_TYPES.has(normalizedType)) {
+            const acceptedFormats = acceptedFormatsInput?.value.trim();
+            if (acceptedFormats) {
+                payload.acceptedFormats = acceptedFormats;
+            }
+            const maxFileLimit = parseInt(maxFileLimitInput?.value, 10);
+            if (!Number.isNaN(maxFileLimit) && maxFileLimit > 0) {
+                payload.maxFileLimit = maxFileLimit;
+            }
+        }
+
         try {
             const response = await fetch(`${API_BASE}/locations/${selectedLocation.id}/custom-fields`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 showMessage('Custom field created successfully!', 'success');
-                e.target.reset();
+                resetCustomFieldForm();
                 loadCustomFields();
+                closeCreateFieldModal();
             } else {
                 showMessage(`Failed to create field: ${result.error}`, 'error');
             }

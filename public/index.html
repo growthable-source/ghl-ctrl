@@ -73,39 +73,179 @@
 
                 <div id="fields-section" class="content-section active">
                     <div class="card">
-                        <h2>Add New Custom Field</h2>
-                        <form id="createFieldForm">
-                            <div class="form-group">
-                                <label for="fieldName">Field Name *</label>
-                                <input type="text" id="fieldName" name="name" required>
+                        <div class="card-header-row">
+                            <h2>Add New Custom Field</h2>
+                            <button type="button" class="btn btn-primary" id="openCreateFieldModalBtn">+ New Custom Field</button>
+                        </div>
+                        <p class="card-helper">Launch the builder to configure a new custom field that matches your workflow. Use version control to roll back if you prefer the legacy inline form.</p>
+                    </div>
+
+                    <div id="createFieldModal" class="modal-overlay" aria-hidden="true">
+                        <div class="cf-modal">
+                            <header class="cf-modal-header">
+                                <div>
+                                    <h2>Create Custom Field</h2>
+                                    <p class="cf-modal-subtitle">Choose a field type to get started.</p>
+                                </div>
+                                <button type="button" class="cf-modal-close" id="closeCreateFieldModalBtn" aria-label="Close">&times;</button>
+                            </header>
+                            <div class="cf-modal-body">
+                                <section id="fieldTypeSelection" class="field-type-selection" data-step="select">
+                                    <div class="field-type-group">
+                                        <h3>Text Input</h3>
+                                        <div class="field-type-grid">
+                                            <button type="button" class="field-type-btn" data-field-type="TEXT">
+                                                <span>Single Line</span>
+                                                <small>Short text input</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="LARGE_TEXT">
+                                                <span>Multi Line</span>
+                                                <small>Paragraph text area</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="TEXTBOX_LIST">
+                                                <span>Text Box List</span>
+                                                <small>Multiple short inputs</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="field-type-group">
+                                        <h3>Values</h3>
+                                        <div class="field-type-grid">
+                                            <button type="button" class="field-type-btn" data-field-type="NUMERICAL">
+                                                <span>Number</span>
+                                                <small>Store numeric values</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="PHONE">
+                                                <span>Phone</span>
+                                                <small>Phone number input</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="MONETORY">
+                                                <span>Monetary</span>
+                                                <small>Currency amount</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="field-type-group">
+                                        <h3>Choosing Options</h3>
+                                        <div class="field-type-grid">
+                                            <button type="button" class="field-type-btn" data-field-type="SINGLE_OPTIONS">
+                                                <span>Dropdown (Single)</span>
+                                                <small>Pick one option</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="MULTIPLE_OPTIONS">
+                                                <span>Dropdown (Multiple)</span>
+                                                <small>Select multiple choices</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="RADIO">
+                                                <span>Radio Select</span>
+                                                <small>Single choice buttons</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="CHECKBOX">
+                                                <span>Checkbox</span>
+                                                <small>Single toggle</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="field-type-group">
+                                        <h3>Others</h3>
+                                        <div class="field-type-grid">
+                                            <button type="button" class="field-type-btn" data-field-type="DATE">
+                                                <span>Date Picker</span>
+                                                <small>Select a calendar date</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="FILE_UPLOAD">
+                                                <span>File Upload</span>
+                                                <small>Attach documents</small>
+                                            </button>
+                                            <button type="button" class="field-type-btn" data-field-type="SIGNATURE">
+                                                <span>Signature</span>
+                                                <small>Capture e-signatures</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section id="fieldDetailsStep" class="field-details hidden" data-step="details">
+                                    <button type="button" class="link-btn back-link" id="fieldTypeBackBtn">← Change field type</button>
+                                    <div class="selected-type-pill" id="selectedFieldTypeBadge">Single Line</div>
+                                    <form id="createFieldForm">
+                                        <div class="form-group">
+                                            <label for="fieldName">Field Name *</label>
+                                            <input type="text" id="fieldName" name="name" required>
+                                        </div>
+                                        <div class="form-group hidden" aria-hidden="true">
+                                            <label for="fieldDataType">Data Type *</label>
+                                            <select id="fieldDataType" name="dataType" required>
+                                                <option value="TEXT" selected>Single Line</option>
+                                                <option value="LARGE_TEXT">Multi Line</option>
+                                                <option value="TEXTBOX_LIST">Text Box List</option>
+                                                <option value="NUMERICAL">Number</option>
+                                                <option value="PHONE">Phone</option>
+                                                <option value="MONETORY">Monetary</option>
+                                                <option value="SINGLE_OPTIONS">Dropdown (Single)</option>
+                                                <option value="MULTIPLE_OPTIONS">Dropdown (Multiple)</option>
+                                                <option value="RADIO">Radio Select</option>
+                                                <option value="CHECKBOX">Checkbox</option>
+                                                <option value="DATE">Date Picker</option>
+                                                <option value="FILE_UPLOAD">File Upload</option>
+                                                <option value="SIGNATURE">Signature</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="fieldPlaceholder">Placeholder</label>
+                                            <input type="text" id="fieldPlaceholder" name="placeholder" data-original-type="text">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="fieldDescription">Description</label>
+                                            <textarea id="fieldDescription" name="description" rows="2" placeholder="Optional helper text shown to users"></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="fieldModel">Model</label>
+                                            <select id="fieldModel" name="model">
+                                                <option value="contact">Contact</option>
+                                                <option value="opportunity">Opportunity</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group inline-group">
+                                            <label class="checkbox-control">
+                                                <input type="checkbox" id="fieldShowInForms" name="showInForms" checked>
+                                                <span>Show in forms</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group" id="fieldOptionsContainer" style="display: none;">
+                                            <div class="form-group-header">
+                                                <label>Options</label>
+                                                <p class="field-helper">Define the choices your users will see.</p>
+                                            </div>
+                                            <div class="field-option-list" id="fieldOptionsList"></div>
+                                            <button type="button" class="btn btn-secondary" id="addFieldOptionBtn">+ Add Option</button>
+                                        </div>
+                                        <div class="form-group inline-group" id="fieldAllowCustomOptionRow" style="display: none;">
+                                            <label class="checkbox-control">
+                                                <input type="checkbox" id="fieldAllowCustomOption">
+                                                <span>Allow users to enter their own option</span>
+                                            </label>
+                                            <p class="field-helper small">Custom values only appear on the record they’re added to.</p>
+                                        </div>
+                                        <div class="form-two-column" id="fieldFileControls" style="display: none;">
+                                            <div class="form-group">
+                                                <label for="fieldAcceptedFormats">Allowed file formats</label>
+                                                <input type="text" id="fieldAcceptedFormats" placeholder=".pdf, .jpg, all">
+                                                <p class="field-helper small">Use “all” to allow any file type.</p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="fieldMaxFileLimit">Max files</label>
+                                                <input type="number" id="fieldMaxFileLimit" min="1" value="1">
+                                            </div>
+                                        </div>
+                                        <div class="form-actions">
+                                            <button type="button" class="btn btn-secondary" id="createFieldCancelBtn">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Create Field</button>
+                                        </div>
+                                    </form>
+                                </section>
                             </div>
-                            <div class="form-group">
-                                <label for="fieldDataType">Data Type *</label>
-                                <select id="fieldDataType" name="dataType" required>
-                                    <option value="TEXT">Text</option>
-                                    <option value="TEXTBOX_LIST">Textbox List</option>
-                                    <option value="NUMBER">Number</option>
-                                    <option value="PHONE">Phone</option>
-                                    <option value="MONETARYAMOUNT">Monetary Amount</option>
-                                    <option value="CHECKBOX">Checkbox</option>
-                                    <option value="DROPDOWN">Dropdown</option>
-                                    <option value="RADIO">Radio</option>
-                                    <option value="DATE">Date</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="fieldPlaceholder">Placeholder</label>
-                                <input type="text" id="fieldPlaceholder" name="placeholder">
-                            </div>
-                            <div class="form-group">
-                                <label for="fieldModel">Model</label>
-                                <select id="fieldModel" name="model">
-                                    <option value="contact">Contact</option>
-                                    <option value="opportunity">Opportunity</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Create Field</button>
-                        </form>
+                        </div>
                     </div>
 
                     <div class="card">
