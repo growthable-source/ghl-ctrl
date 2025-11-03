@@ -39,7 +39,7 @@ const DEFAULT_OAUTH_SCOPES =
   [
     'contacts.readonly',
     'opportunities.readonly',
-    'businesses.readonly',
+    'locations.readonly',
     'locations/customValues.readonly',
     'locations/customValues.write',
     'locations/customFields.readonly',
@@ -67,6 +67,44 @@ const hasSupabaseAdmin = Boolean(supabaseAdmin);
 function assertWizardBackend() {
   if (!supabaseAdmin) {
     throw new WizardConfigError('Onboarding wizard backend not configured');
+  }
+}
+
+async function fetchLocationDetails(client, locationId, { logContext = 'HighLevel location lookup' } = {}) {
+  if (!client || !locationId) {
+    return null;
+  }
+  try {
+    const { data } = await client.get(`/locations/${locationId}`);
+    const location = data?.location || data;
+    if (!location || typeof location !== 'object') {
+      return null;
+    }
+    return {
+      id: location.id || locationId,
+      name:
+        location.name ||
+        location.companyName ||
+        location.businessName ||
+        null,
+      email: location.email || null,
+      phone: location.phone || null,
+      website: location.website || null,
+      address: location.address || null,
+      city: location.city || null,
+      state: location.state || null,
+      postalCode: location.postalCode || null,
+      country: location.country || null,
+      companyId: location.companyId || null,
+      locationId: location.id || locationId,
+      raw: location
+    };
+  } catch (error) {
+    console.warn(
+      `[${logContext}] failed`,
+      error.response?.data || error.message
+    );
+    return null;
   }
 }
 
@@ -558,57 +596,47 @@ function upsertUserLocationCache(userId, location) {
 async function fetchOAuthInstallationProfile(credential) {
   try {
     const client = createGHLClient(credential);
-    if (credential.scopeLevel === 'location' && credential.providerLocationId) {
-      const businessId =
+    if (credential.scopeLevel === 'location') {
+      const lookupLocationId =
         credential.providerLocationId ||
-        credential.metadata?.businessId ||
-        credential.metadata?.providerLocationId;
-      if (businessId) {
-        try {
-          const { data } = await client.get('/businesses/', {
-            params: { locationId: businessId }
-          });
-          const businessList = data?.businesses || data || [];
-          const business = Array.isArray(businessList)
-            ? businessList[0]
-            : businessList?.business || businessList;
-          const businessName =
-            business?.name ||
-            business?.businessName ||
-            business?.companyName ||
-            business?.title ||
-            null;
-          return {
-            name: businessName || `Location ${businessId}`,
-            email: business?.email || null,
-            ghlName: businessName || null,
-            locationId: business?.locationId || credential.providerLocationId,
-            businessId: business?.id || businessId,
-            phone: business?.phone || null,
-            website: business?.website || null,
-            address: business?.address || null
-          };
-        } catch (businessError) {
-          console.warn(
-            'Failed to load HighLevel business profile, falling back to location lookup',
-            businessError.response?.data || businessError.message
-          );
-        }
-      }
-      const { data } = await client.get(`/locations/${credential.providerLocationId}`);
-      const location = data?.location || data;
-      const locationName =
-        location?.name ||
-        location?.companyName ||
-        location?.businessName ||
-        location?.title ||
+        credential.metadata?.providerLocationId ||
+        credential.metadata?.locationId ||
         null;
+      if (!lookupLocationId) {
+        return {
+          name: 'Connected Location',
+          email: null,
+          ghlName: null,
+          locationId: null,
+          businessId: null
+        };
+      }
+      const locationProfile = await fetchLocationDetails(client, lookupLocationId, {
+        logContext: 'HighLevel location profile lookup'
+      });
+      if (locationProfile) {
+        const displayName = locationProfile.name || `Location ${lookupLocationId}`;
+        return {
+          name: displayName,
+          email: locationProfile.email || null,
+          ghlName: displayName,
+          locationId: locationProfile.locationId || lookupLocationId,
+          businessId: locationProfile.companyId || locationProfile.locationId || null,
+          phone: locationProfile.phone || null,
+          website: locationProfile.website || null,
+          address: locationProfile.address || null,
+          city: locationProfile.city || null,
+          state: locationProfile.state || null,
+          postalCode: locationProfile.postalCode || null,
+          country: locationProfile.country || null
+        };
+      }
       return {
-        name: locationName || `Location ${credential.providerLocationId}`,
-        email: location?.email || null,
-        ghlName: locationName || null,
-        locationId: credential.providerLocationId,
-        businessId: credential.providerLocationId
+        name: `Location ${lookupLocationId}`,
+        email: null,
+        ghlName: null,
+        locationId: lookupLocationId,
+        businessId: lookupLocationId
       };
     }
     if (credential.scopeLevel === 'agency') {
@@ -761,67 +789,23 @@ function needsProfileRefresh(location) {
 }
 
 async function enrichLocationProfile(userId, location) {
-  if (!location || location.credentials?.type !== 'oauth') {
+  if (!location) {
     return location;
   }
   if (!needsProfileRefresh(location)) {
     return location;
   }
   try {
-    const credentialForLookup = {
-      ...location.credentials,
-      providerLocationId:
-        location.credentials?.providerLocationId || location.locationId,
-      metadata: {
-        ...(location.credentials?.metadata || {}),
-        providerLocationId:
-          location.credentials?.metadata?.providerLocationId || location.locationId
-      }
-    };
-    const profile = await fetchOAuthInstallationProfile(credentialForLookup);
-    if (!profile) {
-      return location;
-    }
-    const updatedName = profile.name || profile.ghlName || location.name;
-    const updatedGhlName = profile.ghlName || profile.name || updatedName;
-    const updatedEmail = profile.email || location.email || null;
-    const mergedCredentials = {
-      ...location.credentials,
-      providerLocationId:
-        credentialForLookup.providerLocationId || location.credentials?.providerLocationId,
-      metadata: {
-        ...(location.credentials?.metadata || {}),
-        ...(profile.businessId ? { businessId: profile.businessId } : {})
-      }
-    };
-    const updatePayload = {
-      name: updatedName || location.name,
-      ghl_name: updatedGhlName || location.ghlName,
-      email: updatedEmail
-    };
-    try {
-      await supabase
-        .from('saved_locations')
-        .update({
-          ...updatePayload,
-          token: encodeLocationCredentials(mergedCredentials)
-        })
-        .eq('id', location.id)
-        .eq('user_id', userId);
-    } catch (persistError) {
-      console.warn('Failed to persist location profile', persistError);
-    }
-    const merged = {
-      ...location,
-      name: updatePayload.name,
-      ghlName: updatePayload.ghl_name,
-      email: updatePayload.email,
-      credentials: mergedCredentials
-    };
-    upsertUserLocationCache(userId, merged);
-    return merged;
+    const { location: refreshed } = await refreshLocationBusinessProfile(userId, location, {
+      force: true,
+      logContext: 'HighLevel profile enrichment'
+    });
+    return refreshed || location;
   } catch (error) {
-    console.warn('HighLevel profile enrichment failed', error.response?.data || error.message);
+    console.warn(
+      'HighLevel profile enrichment failed',
+      error.response?.data || error.message || error
+    );
     return location;
   }
 }
@@ -924,6 +908,131 @@ async function maybeRefreshLocationCredential(userId, location) {
     });
     return location;
   }
+}
+
+async function refreshLocationBusinessProfile(
+  userId,
+  location,
+  { force = false, logContext = 'Location profile refresh' } = {}
+) {
+  if (!userId || !location) {
+    return { location, refreshed: false };
+  }
+
+  let working = location;
+
+  try {
+    working = await maybeRefreshLocationCredential(userId, working);
+  } catch (refreshError) {
+    console.warn(`[${logContext}] token refresh failed`, refreshError);
+  }
+
+  if (!force && !needsProfileRefresh(working)) {
+    return { location: working, refreshed: false };
+  }
+
+  const lookupLocationId =
+    working.credentials?.metadata?.providerLocationId ||
+    working.credentials?.providerLocationId ||
+    working.locationId;
+
+  const credentialForClient =
+    working.credentials && typeof working.credentials === 'object'
+      ? {
+          ...working.credentials,
+          providerLocationId:
+            working.credentials.providerLocationId || working.locationId,
+          metadata: {
+            ...(working.credentials.metadata || {}),
+            providerLocationId:
+              working.credentials.metadata?.providerLocationId ||
+              working.locationId
+          }
+        }
+      : {
+          type: 'private_token',
+          accessToken: working.token || ''
+        };
+
+  let client = null;
+  try {
+    client = createGHLClient(credentialForClient);
+  } catch (clientError) {
+    console.warn(`[${logContext}] client creation failed`, clientError.message);
+    throw clientError;
+  }
+
+  const locationProfile = await fetchLocationDetails(client, lookupLocationId, {
+    logContext
+  });
+
+  const resolvedName =
+    locationProfile?.name ||
+    locationProfile?.raw?.companyName ||
+    locationProfile?.raw?.businessName ||
+    working.ghlName ||
+    working.name ||
+    (lookupLocationId ? `Location ${lookupLocationId}` : 'Connected Location');
+
+  const resolvedEmail =
+    locationProfile?.email ||
+    locationProfile?.raw?.email ||
+    working.email ||
+    null;
+
+  const resolvedBusinessId =
+    locationProfile?.companyId ||
+    locationProfile?.id ||
+    working.credentials?.metadata?.businessId ||
+    null;
+
+  const updatedCredentials = (() => {
+    const base =
+      working.credentials && typeof working.credentials === 'object'
+        ? { ...working.credentials }
+        : { type: 'private_token', accessToken: working.token || '' };
+    base.metadata = {
+      ...(base.metadata || {}),
+      ...(lookupLocationId ? { providerLocationId: lookupLocationId } : {}),
+      ...(resolvedBusinessId ? { businessId: resolvedBusinessId } : {})
+    };
+    if (!base.providerLocationId && lookupLocationId) {
+      base.providerLocationId = lookupLocationId;
+    }
+    return base;
+  })();
+
+  const updatedLocation = {
+    ...working,
+    name: resolvedName,
+    ghlName: resolvedName,
+    email: resolvedEmail,
+    credentials: updatedCredentials,
+    token: getLocationAccessToken(updatedCredentials) || working.token
+  };
+
+  try {
+    await supabase
+      .from('saved_locations')
+      .update({
+        name: updatedLocation.name,
+        ghl_name: updatedLocation.ghlName,
+        email: updatedLocation.email,
+        token: encodeLocationCredentials(updatedCredentials)
+      })
+      .eq('id', working.id)
+      .eq('user_id', userId);
+  } catch (persistError) {
+    console.warn(`[${logContext}] failed to persist profile`, persistError);
+  }
+
+  upsertUserLocationCache(userId, updatedLocation);
+
+  return {
+    location: updatedLocation,
+    refreshed: Boolean(locationProfile),
+    locationProfile
+  };
 }
 
 // IMPORTANT: Stripe webhook MUST come before express.json() middleware
@@ -2190,10 +2299,9 @@ if (existingLocation) {
   // Test the connection
   try {
     const client = createGHLClient(token);
-    const response = await client.get(`/locations/${locationId}`);
-    
-    // Get location details
-    const locationData = response.data?.location || response.data;
+    const locationProfile = await fetchLocationDetails(client, locationId, {
+      logContext: 'Location connect lookup'
+    });
     
     // Create location object
     const credentials = {
@@ -2202,14 +2310,25 @@ if (existingLocation) {
       scopeLevel: 'location',
       providerLocationId: locationId
     };
+    if (locationProfile?.companyId) {
+      credentials.metadata = { businessId: locationProfile.companyId };
+    }
     const newLocation = {
       id: Date.now().toString(),
-      name: name,
+      name:
+        locationProfile?.name ||
+        locationProfile?.raw?.companyName ||
+        locationProfile?.raw?.businessName ||
+        name,
       locationId: locationId,
       token: token,
       credentials,
-      ghlName: locationData?.name || locationData?.companyName || name,
-      email: locationData?.email || '',
+      ghlName:
+        locationProfile?.name ||
+        locationProfile?.raw?.companyName ||
+        locationProfile?.raw?.businessName ||
+        name,
+      email: locationProfile?.email || locationProfile?.raw?.email || '',
       addedAt: new Date().toISOString(),
       lastUsed: null
     };
@@ -3542,81 +3661,38 @@ app.post('/api/locations/:locationId/audit-fields', ensureAuthenticated, async (
 app.get('/api/locations/:locationId/stats', ensureAuthenticated, async (req, res) => {
   const userId = req.user.id;
   const { locationId } = req.params;
-  
-  let location = userLocations[userId]?.find(loc => loc.id === locationId);
+
+  let location = userLocations[userId]?.find((loc) => loc.id === locationId);
   if (!location) {
     return res.status(404).json({
       success: false,
       error: 'Location not found'
     });
   }
-  location = await enrichLocationProfile(userId, location);
 
   try {
-    const client = createGHLClient(location.token);
-    let displayName = location.ghlName || location.name;
-    let businessId =
-      location.credentials?.metadata?.businessId ||
-      location.credentials?.providerLocationId ||
-      location.locationId;
-    let businessProfile = null;
+    const { location: hydratedLocation, locationProfile } =
+      await refreshLocationBusinessProfile(userId, location, {
+        force: false,
+        logContext: 'Location stats lookup'
+      });
+    location = hydratedLocation || location;
 
-    if (location.credentials?.type === 'oauth' && businessId) {
-      try {
-        const businessRes = await client.get('/businesses/', {
-          params: { locationId: businessId }
-        });
-        const businessList = businessRes.data?.businesses || businessRes.data || [];
-        const business = Array.isArray(businessList)
-          ? businessList[0]
-          : businessList?.business || businessList;
-        if (business) {
-          businessProfile = business;
-          displayName = business.name || displayName;
-          businessId = business.id || businessId;
-          const updatePayload = {
-            ghl_name: business.name || displayName || location.name,
-            email: business.email || location.email || null
-          };
-          if (
-            !location.name ||
-            location.name === 'Connected Location' ||
-            location.name === location.locationId
-          ) {
-            updatePayload.name = business.name || displayName || location.name;
-          }
-          try {
-            await supabase
-              .from('saved_locations')
-              .update(updatePayload)
-              .eq('id', location.id)
-              .eq('user_id', userId);
-            location = {
-              ...location,
-              name: updatePayload.name || location.name,
-              ghlName: updatePayload.ghl_name || location.ghlName,
-              email: updatePayload.email || location.email
-            };
-            upsertUserLocationCache(userId, location);
-          } catch (updateError) {
-            console.warn('Failed to persist business profile details', updateError);
-          }
-        }
-      } catch (businessError) {
-        console.warn(
-          'HighLevel business lookup failed',
-          businessError.response?.data || businessError.message
-        );
-      }
-    }
+    const clientSource =
+      location.credentials && typeof location.credentials === 'object'
+        ? location.credentials
+        : location.token;
+    const client = createGHLClient(clientSource);
 
-    if (!displayName) {
+    let displayName = location.ghlName || location.name || '';
+    if (!displayName && location.locationId) {
       try {
-        const locationRes = await client.get(`/locations/${location.locationId}`);
-        const data = locationRes.data?.location || locationRes.data;
+        const { data } = await client.get(`/locations/${location.locationId}`);
+        const fallback = data?.location || data;
         displayName =
-          data?.name ||
-          data?.companyName ||
+          fallback?.name ||
+          fallback?.companyName ||
+          fallback?.businessName ||
           `Location ${location.locationId}`;
       } catch (fallbackError) {
         console.warn(
@@ -3641,8 +3717,7 @@ app.get('/api/locations/:locationId/stats', ensureAuthenticated, async (req, res
 
     const [fieldsRes, valuesRes, tagsRes, linksRes, mediaRes] = await Promise.all(statsPromises);
 
-    const isAxiosError = (response) =>
-      response && response.isAxiosError;
+    const isAxiosError = (response) => response && response.isAxiosError;
 
     res.json({
       success: true,
@@ -3668,13 +3743,74 @@ app.get('/api/locations/:locationId/stats', ensureAuthenticated, async (req, res
             ? 'HighLevel Marketplace'
             : 'Private Token',
         displayName,
-        business: businessProfile
+        business:
+          locationProfile ||
+          (location.credentials?.metadata?.businessId
+            ? {
+                id: location.credentials.metadata.businessId,
+                name: location.ghlName || location.name || displayName
+              }
+            : null)
       }
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+app.post('/api/locations/:locationId/sync-business', ensureAuthenticated, async (req, res) => {
+  const userId = req.user.id;
+  const { locationId } = req.params;
+
+  try {
+    let location =
+      userLocations[userId]?.find((loc) => loc.id === locationId) || null;
+
+    if (!location) {
+      const { data, error } = await supabase
+        .from('saved_locations')
+        .select('id, name, location_id, token, ghl_name, email, added_at, last_used')
+        .eq('user_id', userId)
+        .eq('id', locationId)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          error: 'Location not found'
+        });
+      }
+      const mapped = mapSavedLocationRow(data);
+      upsertUserLocationCache(userId, mapped);
+      location = mapped;
+    }
+
+    const { location: updatedLocation, locationProfile } =
+      await refreshLocationBusinessProfile(userId, location, {
+        force: true,
+        logContext: 'Manual business sync'
+      });
+
+    const safeLocation = toSafeLocation(updatedLocation || location);
+
+    res.json({
+      success: true,
+      location: safeLocation,
+      businessName: locationProfile?.name || safeLocation.ghlName || safeLocation.name
+    });
+  } catch (error) {
+    console.error(
+      'Manual business profile sync failed',
+      error.response?.data || error.message || error
+    );
+    res.status(500).json({
+      success: false,
+      error: 'Failed to synchronize location profile'
     });
   }
 });

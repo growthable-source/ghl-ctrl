@@ -2882,23 +2882,92 @@ function exportTriggerLinks() {
 
 function loadLocationSettings() {
     if (!selectedLocation) return;
-    
+
     const settingsEl = document.getElementById('locationSettings');
+    const displayName = escapeHtml(selectedLocation.ghlName || selectedLocation.name || 'Connected Location');
+    const locationId = escapeHtml(selectedLocation.locationId || 'N/A');
+    const ghlName = escapeHtml(selectedLocation.ghlName || 'N/A');
+    const email = escapeHtml(selectedLocation.email || 'N/A');
+    const addedAt = selectedLocation.addedAt ? new Date(selectedLocation.addedAt).toLocaleString() : 'N/A';
+    const lastUsed = selectedLocation.lastUsed ? new Date(selectedLocation.lastUsed).toLocaleString() : 'Never';
+
     settingsEl.innerHTML = `
         <div class="location-card">
             <div class="location-card-header">
-                <div class="location-card-title">${selectedLocation.name}</div>
+                <div class="location-card-title">${displayName}</div>
+                <div class="location-card-actions">
+                    <button class="btn btn-secondary" id="syncLocationProfileBtn" type="button">
+                        🔄 Sync Business Name
+                    </button>
+                </div>
             </div>
             <div class="location-card-meta">
-                <p><strong>Location ID:</strong> ${selectedLocation.locationId}</p>
-                <p><strong>GHL Name:</strong> ${selectedLocation.ghlName || 'N/A'}</p>
-                <p><strong>Email:</strong> ${selectedLocation.email || 'N/A'}</p>
-                <p><strong>Added:</strong> ${new Date(selectedLocation.addedAt).toLocaleString()}</p>
-                <p><strong>Last Used:</strong> ${selectedLocation.lastUsed ? new Date(selectedLocation.lastUsed).toLocaleString() : 'Never'}</p>
+                <p><strong>Location ID:</strong> ${locationId}</p>
+                <p><strong>Business Name:</strong> ${displayName}</p>
+                <p><strong>GHL Name:</strong> ${ghlName}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Added:</strong> ${addedAt}</p>
+                <p><strong>Last Used:</strong> ${lastUsed}</p>
                 <p><strong>Token:</strong> ***hidden***</p>
             </div>
         </div>
     `;
+
+    const syncBtn = document.getElementById('syncLocationProfileBtn');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => synchronizeLocationProfile(selectedLocation.id));
+    }
+}
+
+async function synchronizeLocationProfile(locationId) {
+    if (!locationId) return;
+
+    const button = document.getElementById('syncLocationProfileBtn');
+    const originalLabel = button ? button.innerHTML : '';
+
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = 'Syncing...';
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/locations/${encodeURIComponent(locationId)}/sync-business`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data?.success) {
+            const message = data?.error || `Request failed (status ${response.status})`;
+            throw new Error(message);
+        }
+
+        if (data.location) {
+            const updatedLocation = data.location;
+            currentLocations = currentLocations.map((loc) =>
+                loc.id === updatedLocation.id ? { ...loc, ...updatedLocation } : loc
+            );
+
+            if (selectedLocation && selectedLocation.id === updatedLocation.id) {
+                selectedLocation = { ...selectedLocation, ...updatedLocation };
+            }
+
+            updateLocationDropdown();
+            updateBreadcrumb();
+            loadLocationSettings();
+        }
+
+        const name = data.businessName || selectedLocation?.ghlName || selectedLocation?.name;
+        showMessage(name ? `Synchronized "${name}"` : 'Location synchronized', 'success');
+    } catch (error) {
+        console.error('Location synchronization failed:', error);
+        showMessage(`Failed to synchronize location: ${error.message}`, 'error');
+    } finally {
+        const currentButton = document.getElementById('syncLocationProfileBtn');
+        if (currentButton) {
+            currentButton.disabled = false;
+            currentButton.innerHTML = originalLabel || '🔄 Sync Business Name';
+        }
+    }
 }
 
 async function loadSocialProfiles() {
