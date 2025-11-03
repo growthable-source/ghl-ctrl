@@ -1526,7 +1526,7 @@ async function issueWizardLinkRecord(userId, templateId, locationId) {
     .select('id, public_token')
     .single();
   if (error) throw error;
-  const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+  const baseUrl = resolveBaseUrl();
   return {
     wizardId: data.id,
     publicUrl: `${baseUrl}/onboard.html?token=${data.public_token}`
