@@ -7,7 +7,63 @@
   <link rel="stylesheet" href="../build/admin.css" />
 </head>
 <body class="admin-onboarding">
+  <div class="nav-backdrop" id="navBackdrop" hidden></div>
+  <aside class="nav-drawer" id="navDrawer" aria-label="Primary navigation" hidden>
+    <div class="nav-drawer__header">
+      <h2 class="nav-drawer__title">Navigate</h2>
+      <button class="nav-drawer__close" id="navClose" aria-label="Close navigation">
+        <span aria-hidden="true">✕</span>
+      </button>
+    </div>
+    <nav class="nav-drawer__content">
+      <ul class="nav-drawer__list">
+        <li><a href="/" data-nav-close>🏠 Dashboard</a></li>
+        <li><a href="/admin/onboarding.html" data-nav-close>🧭 Onboarding Wizards</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <button class="hamburger-btn" id="navToggle" aria-label="Open navigation" aria-expanded="false" aria-controls="navDrawer">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="hamburger-icon" aria-hidden="true">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+          </span>
+        </button>
+        <h1>🧭 Onboarding Wizards</h1>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/" class="nav-btn">
+            <span class="nav-btn-icon" aria-hidden="true">🏠</span>
+            <span class="nav-btn-label">Home</span>
+          </a>
+        </nav>
+      </div>
+      <div class="header-right">
+        <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li class="current" aria-current="page">Onboarding Wizards</li>
+      </ol>
+    </nav>
+  </div>
+
   <div id="wizard-builder-root"></div>
+  <script src="../js/navigation.js"></script>
+  <script>
+    window.initGlobalNavigation?.({
+      homeHref: '/',
+      onboardingHref: '/admin/onboarding.html',
+      manageLocationsHref: '/'
+    });
+  </script>
   <script type="module" src="../build/admin.js"></script>
 </body>
 </html>

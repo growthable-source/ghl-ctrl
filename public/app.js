@@ -599,6 +599,14 @@ function hydrateCurrentUserProfile() {
 
 
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.initGlobalNavigation === 'function') {
+        window.initGlobalNavigation({
+            onManageLocations: () => showLocationSettings(),
+            onConnectCrm: () => openConnectCrmModal(),
+            onCompareLocations: () => showCompareModal('values'),
+            onShowPricing: () => showPricingModal()
+        });
+    }
     checkAuthentication();
     setupFilterListeners();
     updateBreadcrumb();
